@@ -35,7 +35,7 @@ MODEL_NAME = os.environ.get("MODEL_NAME", "microsoft/deberta-v3-base")
 MAX_LENGTH = 256
 BATCH_SIZE = 8
 GRAD_ACCUM = 2
-LR = 2e-5
+LR = 1e-5
 EPOCHS = 2
 SEED = 42
 FULL_TRAIN = False
@@ -70,8 +70,10 @@ def load():
 def class_weights(y):
     counts = np.bincount(y, minlength=NUM_LABELS).astype(np.float64)
     counts[counts == 0] = 1.0
-    w = counts.sum() / (NUM_LABELS * counts)
-    return torch.tensor((w / w.mean()).astype(np.float32))
+    w = np.sqrt(counts.sum() / (NUM_LABELS * counts))
+    w = w / w.mean()
+    w = np.clip(w, 0.5, 5.0)
+    return torch.tensor(w.astype(np.float32))
 
 
 def macro_disparate_impact(jobs, genders):
@@ -116,7 +118,7 @@ def main():
     args = TrainingArguments(
         output_dir=f"{OUT}/ckpt", per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=BATCH_SIZE * 2, gradient_accumulation_steps=GRAD_ACCUM,
-        learning_rate=LR, num_train_epochs=EPOCHS, weight_decay=0.01, warmup_ratio=0.03,
+        learning_rate=LR, num_train_epochs=EPOCHS, weight_decay=0.01, warmup_ratio=0.1, max_grad_norm=1.0,
         fp16=False, eval_strategy="epoch", save_strategy="epoch",
         load_best_model_at_end=True, metric_for_best_model="macro_f1",
         greater_is_better=True, save_total_limit=1, logging_steps=100, report_to="none", seed=SEED,
