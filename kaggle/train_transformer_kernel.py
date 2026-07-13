@@ -34,10 +34,10 @@ from transformers import (
 # ---- knobs -----------------------------------------------------------------
 MODEL_NAME = os.environ.get("MODEL_NAME", "microsoft/deberta-v3-base")
 MAX_LENGTH = 256
-BATCH_SIZE = 16
-GRAD_ACCUM = 1
+BATCH_SIZE = 8
+GRAD_ACCUM = 2
 LR = 2e-5
-EPOCHS = 3
+EPOCHS = 2
 SEED = 42
 FULL_TRAIN = False
 VALID_SIZE = 0.15
@@ -118,7 +118,7 @@ def main():
         output_dir=f"{OUT}/ckpt", per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=BATCH_SIZE * 2, gradient_accumulation_steps=GRAD_ACCUM,
         learning_rate=LR, num_train_epochs=EPOCHS, weight_decay=0.01, warmup_ratio=0.06,
-        fp16=True, eval_strategy="steps", eval_steps=500, save_strategy="steps",
+        fp16=False, eval_strategy="steps", eval_steps=500, save_strategy="steps",
         save_steps=500, load_best_model_at_end=True, metric_for_best_model="macro_f1",
         greater_is_better=True, save_total_limit=1, logging_steps=100, report_to="none", seed=SEED,
     )
