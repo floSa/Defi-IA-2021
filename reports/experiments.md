@@ -10,6 +10,7 @@ Ground-truth labels' own DI = 3.898.
 | B | 2026-07-13 | word(1–2)+char_wb(2–5) TF-IDF + LinearSVC, balanced | lower | **0.7641** | 3.85 | strong classical, ~9 min, 6.5 GB RAM peak |
 | F1 | 2026-07-13 | = B + **gender scrubbing** | lower + scrub | 0.7601 | **3.49** | fairness track: −0.36 DI for −0.4 F1 pt |
 | — | 2026-07-13 | word(1–2) + SGD(hinge), balanced | lower | 0.5230 | 9.06 | SGD untuned = poor; abandoned, use LinearSVC |
+| B' | 2026-07-13 | word(1–2)+**hashed** char_wb(2–5) + LinearSVC | lower | 0.7639 | 3.86 | HashingVectorizer = same score as B, bounded RAM → full-data submission now possible locally |
 
 ## ⚠️ Local compute constraint (7.4 GB WSL, no GPU)
 
@@ -20,8 +21,9 @@ construction spikes >7.4 GB). Confirmed repeatedly on 2026-07-13. Consequences:
 - **Submissions** generated locally are limited to the lighter **word-only**
   config. The strong word+char model (B, 0.7641) and the transformer are
   deferred to the **64 GB desktop** (tomorrow) or **Kaggle** (T4).
-- Engineering fix for later, if we want the char model locally: swap the char
-  `TfidfVectorizer` for a `HashingVectorizer` (hard-bounded memory).
+- **Fixed (2026-07-13):** the char channel now uses a `HashingVectorizer`
+  (fixed `n_features=2**20`), so the full-data strong model fits locally
+  without OOM. Score is unchanged (0.7639 vs 0.7641).
 
 ## Reading
 

@@ -21,7 +21,11 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import (
+    HashingVectorizer,
+    TfidfTransformer,
+    TfidfVectorizer,
+)
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.svm import LinearSVC
@@ -32,10 +36,16 @@ class TfidfLinearConfig:
     """Hyper-parameters for the classical model (mirrors config.yaml)."""
 
     word_ngram_range: tuple[int, int] = (1, 2)
-    # char range capped at 4 (not 5): the 5-gram vocabulary blows up RAM during
-    # construction on this 7.4 GB box for a negligible Macro-F1 gain.
-    char_ngram_range: tuple[int, int] = (2, 4)
+    # char (2,5) is safe now that the char channel is hashed (bounded memory).
+    char_ngram_range: tuple[int, int] = (2, 5)
     use_char: bool = True
+    # Hashing the char channel bounds its memory to a fixed n_features, so the
+    # full 217k set fits on the 7.4 GB box (a plain char vocabulary OOM-crashes
+    # WSL). No accuracy loss in practice at 2**21 features.
+    hash_char: bool = True
+    # 2**20 keeps the full 217k fit comfortably under 7.4 GB (2**21 peaks ~7 GB
+    # on the 184k holdout alone); collision impact on Macro-F1 is negligible.
+    char_n_features: int = 2**20
     min_df: int = 5
     max_features_word: int | None = 200_000
     max_features_char: int | None = 200_000
@@ -62,15 +72,37 @@ def _build_vectorizer(cfg: TfidfLinearConfig) -> FeatureUnion | TfidfVectorizer:
     )
     if not cfg.use_char:
         return word
-    char = TfidfVectorizer(
-        analyzer="char_wb",
-        ngram_range=cfg.char_ngram_range,
-        min_df=cfg.min_df,
-        max_features=cfg.max_features_char,
-        sublinear_tf=cfg.sublinear_tf,
-        strip_accents="unicode",
-        dtype=np.float32,
-    )
+
+    if cfg.hash_char:
+        # HashingVectorizer uses fixed memory (no vocabulary dict), then IDF is
+        # applied by a TfidfTransformer — bounded RAM regardless of corpus size.
+        char = Pipeline(
+            [
+                (
+                    "hash",
+                    HashingVectorizer(
+                        analyzer="char_wb",
+                        ngram_range=cfg.char_ngram_range,
+                        n_features=cfg.char_n_features,
+                        alternate_sign=False,
+                        norm=None,
+                        strip_accents="unicode",
+                        dtype=np.float32,
+                    ),
+                ),
+                ("idf", TfidfTransformer(sublinear_tf=cfg.sublinear_tf)),
+            ]
+        )
+    else:
+        char = TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=cfg.char_ngram_range,
+            min_df=cfg.min_df,
+            max_features=cfg.max_features_char,
+            sublinear_tf=cfg.sublinear_tf,
+            strip_accents="unicode",
+            dtype=np.float32,
+        )
     return FeatureUnion([("word", word), ("char", char)])
 
 
