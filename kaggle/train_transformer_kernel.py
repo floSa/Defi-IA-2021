@@ -15,6 +15,16 @@ fully reproducible from this one file. Logic mirrors
 
 import json
 import os
+import subprocess
+import sys
+
+# ModernBERT needs transformers>=4.48; ensure it whether run via the API or
+# pasted straight into a Kaggle notebook. No-ops if already satisfied.
+subprocess.run(
+    [sys.executable, "-m", "pip", "install", "-q", "-U",
+     "transformers>=4.48", "datasets", "sentencepiece"],
+    check=False,
+)
 
 import numpy as np
 import pandas as pd
