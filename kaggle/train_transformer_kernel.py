@@ -11,11 +11,10 @@ import subprocess
 import sys
 
 # ModernBERT needs transformers>=4.48; ensure it whether run via API or notebook.
-subprocess.run(
-    [sys.executable, "-m", "pip", "install", "-q", "-U",
-     "transformers>=4.48", "datasets", "sentencepiece"],
-    check=False,
-)
+# Only add sentencepiece (DeBERTa-v3 tokenizer). Do NOT upgrade torch or
+# transformers: newer torch wheels drop P100 (sm_60) support and Kaggle may
+# assign a P100, causing "no kernel image is available for execution".
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "sentencepiece", "protobuf"], check=False)
 
 import numpy as np
 import pandas as pd
@@ -33,7 +32,7 @@ from transformers import (
 )
 
 # ---- knobs -----------------------------------------------------------------
-MODEL_NAME = os.environ.get("MODEL_NAME", "answerdotai/ModernBERT-base")
+MODEL_NAME = os.environ.get("MODEL_NAME", "microsoft/deberta-v3-base")
 MAX_LENGTH = 256
 BATCH_SIZE = 16
 GRAD_ACCUM = 1
