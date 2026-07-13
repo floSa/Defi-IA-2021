@@ -1,0 +1,27 @@
+# Data (raw files are large and redistribution-restricted)
+/data/raw/
+/data/interim/
+/data/processed/
+*.zip
+
+# Artifacts
+/models/*
+!/models/.gitkeep
+/submissions/*.csv
+/reports/*.png
+/reports/*.html
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,59 @@
+Task overview
+
+This edition of the Défi IA pertains to NLP. The task is straightforward: assign the correct job category to a job description. This is thus a multi-class classification task with 28 classes to choose from.
+
+The data has been retrieved from CommonCrawl. The latter has been famously used to train OpenAI's GPT-3 model. The data is therefore representative of what can be found on the English speaking part of the Internet, and thus contains a certain amount of bias. One of the goals of this competition is to design a solution that is both accurate as well as fair, as explained in the Evaluation section.
+Participation
+
+Any student from a French speaking university is eligible to participate. You can be part of a team. You can register to the competition by creating or logging into an existing Kaggle account and hitting the "Join Competition" button. Please use the following template as your team name:
+
+<country_name> - <university_name> - <team_name>
+
+Eligibility rules
+
+    You are not allowed to use any external dataset whatsoever.
+    You are allowed to use pre-trained models, so long as they are only fine-tuned (i.e. transfer learning) on the datasets we provide.
+    You have to send your code for inspection to maxhalford25@gmail.com. You should do this once the competition is over. If you don't send your code, then you will not be eligible to any prize whatsoever. In other words, you may be the first on the leaderboard, but you won't be considered a winner if you haven't sent us your code.
+
+Feel free to open a discussion thread if you have any question whatsoever. We won't bite.
+Acknowledgments
+
+We wish to thank all the teachers and university staff who are involved in organising this competition, especially during these trying times. In particular, Laurent Risser and Jean-Michel Loubès are to thank for suggesting this particular dataset. Praise also goes towards Brendan Guillouet, who took care of crawling and preparing the datasets.
+Evaluation
+
+The original aspect of this competition is that there will be 3 tracks on which solutions will be ranked. First of all, solutions are ranked according to the Macro F1 metric, which will be used to build the Kaggle leaderboard. The Macro F1 score is simply the arithmetic average of the F1 score for each class.
+
+Like any Kaggle competition, there will be a public leaderboard as well as a private leaderboard. The public leaderboard will reflect your score on a 50% random subset of the test set. The scores for the private leaderboard will be derived from the other 50% subset. The goal is to produce the highest score on the private leaderboard.
+
+The top 10 teams on the first track will be eligible to two other prizes:
+
+    We will rank solutions according to their fairness with respect to the provided genders. In other words, we want you to design a competitive solution that is not biased towards one gender in particular. To be specific, we will measure the average demographic parity across all classes.
+    We will also rank solutions according to their tidyness. This will be reflected by a subjective score based on the following criteria: reproducibility, readability, creativity.
+
+
+
+
+Dataset Description
+train.json
+
+Contains job descriptions as well as genders for the training set, which contains 217,197 samples. If you're using pandas, then you can easily open this with pd.read_json('train.json').set_index('Id').
+train_label.csv
+
+Contains job labels for the training set.
+categories_string.csv
+
+Provides a mapping between job labels and integers, the latter of which are used for scoring submissions.
+test.json
+
+Contains job descriptions as well as genders for the test set, which contains 54,300 samples. If you're using pandas, then you can easily open this with pd.read_json('test.json').set_index('Id').
+template_submissions.csv
+
+Provides an example of what a valid submission should look like. If you're having issues submitting, then please first make sure that your submission 1) contains two columns called Id and Category, 2) is ordered by the Id column, 3) uses integers instead of job labels in the Category column.
+
+Fairness metric
+
+Hello everyone :)
+
+I've just published a notebook with the code that will be used to evaluate your submissions in terms of fairness. Here it is.
+
+Please tell if you have any questions whatsoever. Enjoy!

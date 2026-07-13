@@ -1,0 +1,36 @@
+# Central experiment configuration.
+# Loaded by the (future) CLI; every runnable step reads its knobs from here so
+# experiments are reproducible from a single file under version control.
+
+seed: 42
+
+data:
+  # Stratified hold-out used for all offline evaluation. The organisers score
+  # on a hidden test set; we mirror their 50/50 split habit but stratify by
+  # label to keep rare classes present.
+  valid_size: 0.15
+  stratify: true
+
+preprocessing:
+  lowercase: true          # applied to classical models only
+  scrub_gender: false      # fairness lever; toggled per-experiment
+
+# Placeholder sections filled in as models are implemented.
+tfidf_linear:
+  word_ngram_range: [1, 2]
+  char_ngram_range: [2, 5]
+  min_df: 2
+  max_features: 300000
+  classifier: linear_svm   # linear_svm | logistic | sgd
+
+transformer:
+  model_name: microsoft/deberta-v3-base
+  max_length: 256
+  batch_size: 16
+  learning_rate: 2.0e-5
+  epochs: 3
+  fp16: true
+
+evaluation:
+  primary_metric: macro_f1
+  report_fairness: true

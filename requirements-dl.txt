@@ -1,0 +1,10 @@
+# Deep-learning extras — only needed for transformer fine-tuning.
+# Install on a GPU machine (Kaggle/Colab/cloud) on top of requirements.txt:
+#     pip install -r requirements.txt -r requirements-dl.txt
+#
+# On CPU these are heavy; keep them out of the core environment.
+torch>=2.2
+transformers>=4.40
+datasets>=2.19
+accelerate>=0.30
+sentencepiece>=0.2
