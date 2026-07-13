@@ -1,0 +1,13 @@
+{
+  "id": "KAGGLE_USERNAME/defi-ia-2021-transformer",
+  "title": "Defi IA 2021 Transformer",
+  "code_file": "train_transformer_kernel.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": ["defi-ia-insa-toulouse"],
+  "kernel_sources": []
+}
