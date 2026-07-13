@@ -70,3 +70,18 @@ make eda           # dataset summary
   class-balanced LinearSVC. Char n-grams chosen for robustness to noisy text.
 - **2026-07-13** — GPU route decided: **Kaggle Kernels API** primary (see PLAN
   §8). Colab-via-MCP ruled out (no connector, no headless run API).
+
+## RESUME HERE (session paused 2026-07-13 evening)
+
+State: RoBERTa-base is training on Kaggle as kernel **flosal/defi-ia-2021-transformer** (v9).
+It runs on Kaggle's servers independently of any local session. DeBERTa-v3 was
+abandoned after repeated fp32 NaN divergence (see experiments log / v7-v8).
+
+To resume (one session, from the project root in WSL):
+1. Pull results:  `rm -rf models/kaggle_out && .venv/bin/kaggle kernels output flosal/defi-ia-2021-transformer -p models/kaggle_out/ --force`
+2. Check it trained (loss decreased, no NaN):  inspect `models/kaggle_out/ckpt/*/trainer_state.json` and `models/kaggle_out/valid_metrics.json`.
+3. If good: (a) re-push with FULL_TRAIN=True for the final submission; (b) ensemble:
+   `.venv/bin/python scripts/build_ensemble.py --transformer-logits models/kaggle_out/test_logits.npy --classical-model models/classical_wordchar_svm.joblib --out submissions/ensemble.csv`
+4. Then the fairness-track submission (scrub-gender + name masking).
+
+Accuracy safety net already shipped: submissions/classical_wordchar_svm.csv (~0.764 Macro-F1).
