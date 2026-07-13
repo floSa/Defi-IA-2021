@@ -31,7 +31,7 @@ from transformers import (
 )
 
 # ---- knobs -----------------------------------------------------------------
-MODEL_NAME = os.environ.get("MODEL_NAME", "microsoft/deberta-v3-base")
+MODEL_NAME = os.environ.get("MODEL_NAME", "roberta-base")
 MAX_LENGTH = 256
 BATCH_SIZE = 8
 GRAD_ACCUM = 2
