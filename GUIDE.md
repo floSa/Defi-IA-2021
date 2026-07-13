@@ -55,8 +55,8 @@ make eda           # dataset summary
 - [x] M0 — Scaffolding, data, evaluation layer, tests (DI reproduces 3.898).
 - [x] M1 — Hardened baseline (word LogReg): Macro-F1 0.7335.
 - [x] M2 — Strong classical (word+char LinearSVC): Macro-F1 0.7641.
-- [~] M3 — First valid submission (word-only LinearSVC, full-data) shipped.
-      Strong char model + tuning deferred to 64 GB desktop / Kaggle (local OOM).
+- [x] M3 — Strong word+char (hashed) LinearSVC full-data submission shipped
+      (submissions/classical_wordchar_svm.csv, ~0.764). OOM fixed via HashingVectorizer.
 - [~] M4 — Fairness track: scrub-gender done (DI 3.49); name masking (NER) coded.
 - [ ] M5 — Transformer fine-tune (DeBERTa-v3 / ModernBERT) on GPU (target ≈ 0.81+).
 - [ ] M6 — Ensemble (classical + transformer) + final submissions (both tracks).
