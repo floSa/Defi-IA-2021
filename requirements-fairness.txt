@@ -1,0 +1,5 @@
+# Optional extras for the fairness track (person-name masking via NER).
+# Install then download the small English model:
+#     pip install -r requirements-fairness.txt
+#     python -m spacy download en_core_web_sm
+spacy>=3.7

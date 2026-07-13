@@ -64,3 +64,64 @@ def scrub_gender(text: str) -> str:
     pair with ``basic_clean(lower=True)`` for classical models.
     """
     return _GENDER_RE.sub(lambda m: GENDERED_WORDS[m.group(0).lower()], text)
+
+
+# --- Person-name masking (fairness track) -----------------------------------
+# First names leak gender just as strongly as pronouns. We mask PERSON spans
+# with a neutral placeholder using spaCy NER when available, so the classifier
+# can't key on "Brent" vs "Sara". spaCy is an *optional* dependency; without it
+# the function is a no-op and logs once, so the core pipeline never breaks.
+
+_NAME_PLACEHOLDER = "person"
+_SPACY_NLP = None
+_SPACY_TRIED = False
+
+
+def _get_spacy():
+    global _SPACY_NLP, _SPACY_TRIED
+    if _SPACY_TRIED:
+        return _SPACY_NLP
+    _SPACY_TRIED = True
+    try:
+        import spacy
+
+        # Small English model; NER only for speed.
+        _SPACY_NLP = spacy.load("en_core_web_sm", disable=["lemmatizer", "tagger", "parser"])
+    except Exception:  # pragma: no cover - environment dependent
+        import warnings
+
+        warnings.warn(
+            "spaCy/en_core_web_sm not available; mask_person_names is a no-op. "
+            "Install with: pip install spacy && python -m spacy download en_core_web_sm",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        _SPACY_NLP = None
+    return _SPACY_NLP
+
+
+def mask_person_names(texts, batch_size: int = 256, n_process: int = 1):
+    """Replace PERSON entities with a neutral placeholder.
+
+    Accepts an iterable of strings and returns a list (batched through spaCy's
+    ``nlp.pipe`` for throughput). No-op if spaCy is unavailable.
+    """
+    nlp = _get_spacy()
+    texts = list(texts)
+    if nlp is None:
+        return texts
+
+    out = []
+    for doc in nlp.pipe(texts, batch_size=batch_size, n_process=n_process):
+        if not doc.ents:
+            out.append(doc.text)
+            continue
+        pieces, last = [], 0
+        for ent in doc.ents:
+            if ent.label_ == "PERSON":
+                pieces.append(doc.text[last:ent.start_char])
+                pieces.append(_NAME_PLACEHOLDER)
+                last = ent.end_char
+        pieces.append(doc.text[last:])
+        out.append("".join(pieces))
+    return out

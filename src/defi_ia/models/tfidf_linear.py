@@ -32,11 +32,13 @@ class TfidfLinearConfig:
     """Hyper-parameters for the classical model (mirrors config.yaml)."""
 
     word_ngram_range: tuple[int, int] = (1, 2)
-    char_ngram_range: tuple[int, int] = (2, 5)
+    # char range capped at 4 (not 5): the 5-gram vocabulary blows up RAM during
+    # construction on this 7.4 GB box for a negligible Macro-F1 gain.
+    char_ngram_range: tuple[int, int] = (2, 4)
     use_char: bool = True
-    min_df: int = 3
+    min_df: int = 5
     max_features_word: int | None = 200_000
-    max_features_char: int | None = 300_000
+    max_features_char: int | None = 200_000
     sublinear_tf: bool = True
     classifier: str = "linear_svm"  # linear_svm | logistic | sgd
     C: float = 1.0
@@ -47,6 +49,8 @@ class TfidfLinearConfig:
 
 
 def _build_vectorizer(cfg: TfidfLinearConfig) -> FeatureUnion | TfidfVectorizer:
+    # float32 halves the TF-IDF matrix memory vs the float64 default, which is
+    # the difference between fitting and OOM-ing the full 217k set on 7.4 GB RAM.
     word = TfidfVectorizer(
         analyzer="word",
         ngram_range=cfg.word_ngram_range,
@@ -54,6 +58,7 @@ def _build_vectorizer(cfg: TfidfLinearConfig) -> FeatureUnion | TfidfVectorizer:
         max_features=cfg.max_features_word,
         sublinear_tf=cfg.sublinear_tf,
         strip_accents="unicode",
+        dtype=np.float32,
     )
     if not cfg.use_char:
         return word
@@ -64,6 +69,7 @@ def _build_vectorizer(cfg: TfidfLinearConfig) -> FeatureUnion | TfidfVectorizer:
         max_features=cfg.max_features_char,
         sublinear_tf=cfg.sublinear_tf,
         strip_accents="unicode",
+        dtype=np.float32,
     )
     return FeatureUnion([("word", word), ("char", char)])
 

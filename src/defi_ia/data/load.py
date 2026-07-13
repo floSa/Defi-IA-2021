@@ -24,7 +24,7 @@ def load_categories() -> dict[int, str]:
     """Return the ``{integer_id: job_name}`` mapping used for scoring."""
     df = pd.read_csv(paths.CATEGORIES)
     # File has columns "0" (job name) and "1" (integer id).
-    return dict(zip(df["1"].astype(int), df["0"].astype(str)))
+    return dict(zip(df["1"].astype(int), df["0"].astype(str), strict=True))
 
 
 def load_train(with_labels: bool = True) -> pd.DataFrame:

@@ -59,6 +59,7 @@ def _build_trainer(cfg, train_df, valid_df):
     """Assemble a HF ``Trainer`` (imports torch/transformers lazily)."""
     import torch
     from datasets import Dataset
+    from sklearn.metrics import f1_score
     from transformers import (
         AutoModelForSequenceClassification,
         AutoTokenizer,
@@ -67,7 +68,6 @@ def _build_trainer(cfg, train_df, valid_df):
         Trainer,
         TrainingArguments,
     )
-    from sklearn.metrics import f1_score
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
 

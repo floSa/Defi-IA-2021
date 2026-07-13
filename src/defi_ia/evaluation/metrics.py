@@ -19,7 +19,7 @@ offline score matches the official one.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import pandas as pd
 from sklearn.metrics import f1_score

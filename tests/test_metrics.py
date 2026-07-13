@@ -1,6 +1,5 @@
 """Tests pinning our metrics to the organisers' reference values."""
 
-import pandas as pd
 import pytest
 
 from defi_ia.evaluation.metrics import evaluate, macro_disparate_impact, macro_f1

@@ -51,7 +51,7 @@ def load():
     train = pd.read_json(f"{INPUT}/train.json").set_index("Id")
     labels = pd.read_csv(f"{INPUT}/train_label.csv", index_col="Id")["Category"]
     names = pd.read_csv(f"{INPUT}/categories_string.csv")
-    id2name = dict(zip(names["1"].astype(int), names["0"]))
+    id2name = dict(zip(names["1"].astype(int), names["0"], strict=True))
     train["Category"] = labels
     test = pd.read_json(f"{INPUT}/test.json").set_index("Id")
     for df in (train, test):
