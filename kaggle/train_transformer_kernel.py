@@ -49,7 +49,7 @@ GRAD_ACCUM = 1
 LR = 2e-5
 EPOCHS = 3
 SEED = 42
-FULL_TRAIN = True          # True → fit on all data + submit; False → holdout only
+FULL_TRAIN = False         # first run: holdout → trustworthy Macro-F1 + submission
 VALID_SIZE = 0.15
 NUM_LABELS = 28
 
