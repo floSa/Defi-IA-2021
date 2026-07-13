@@ -28,7 +28,7 @@ sed -i "s#\"id\": \".*/${SLUG}\"#\"id\": \"${REF}\"#" kaggle/kernel-metadata.jso
 sed -i "s#\"MODEL_NAME\", \".*\"#\"MODEL_NAME\", \"${MODEL}\"#" kaggle/train_transformer_kernel.py
 
 echo ">> pushing kernel ${REF} (model=${MODEL})"
-$KAGGLE kernels push -p kaggle/
+$KAGGLE kernels push -p kaggle/ --accelerator NvidiaTeslaT4
 
 echo ">> waiting for completion (polling every 60s)"
 while true; do
