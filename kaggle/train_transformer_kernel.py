@@ -26,7 +26,6 @@ from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
     DataCollatorWithPadding,
-    EarlyStoppingCallback,
     Trainer,
     TrainingArguments,
 )
@@ -117,15 +116,14 @@ def main():
     args = TrainingArguments(
         output_dir=f"{OUT}/ckpt", per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=BATCH_SIZE * 2, gradient_accumulation_steps=GRAD_ACCUM,
-        learning_rate=LR, num_train_epochs=EPOCHS, weight_decay=0.01, warmup_ratio=0.06,
-        fp16=False, eval_strategy="steps", eval_steps=500, save_strategy="steps",
-        save_steps=500, load_best_model_at_end=True, metric_for_best_model="macro_f1",
+        learning_rate=LR, num_train_epochs=EPOCHS, weight_decay=0.01, warmup_ratio=0.03,
+        fp16=False, eval_strategy="epoch", save_strategy="epoch",
+        load_best_model_at_end=True, metric_for_best_model="macro_f1",
         greater_is_better=True, save_total_limit=1, logging_steps=100, report_to="none", seed=SEED,
     )
     trainer = WeightedTrainer(
         model=model, args=args, train_dataset=train_ds, eval_dataset=valid_ds,
         data_collator=DataCollatorWithPadding(tokenizer), compute_metrics=metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=2)],
     )
     trainer.train()
 

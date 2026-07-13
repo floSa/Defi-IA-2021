@@ -8,7 +8,7 @@ for _ in $(seq 1 180); do
   echo "[$(date +%H:%M:%S)] $S"
   case "$S" in
     *RUNNING*|*QUEUED*) sleep 120 ;;
-    *[Cc]omplete*) echo DONE_OK; mkdir -p models/kaggle_out; "$KG" kernels output "$REF" -p models/kaggle_out/ 2>&1; exit 0 ;;
+    *[Cc]omplete*|*COMPLETE*) echo DONE_OK; mkdir -p models/kaggle_out; "$KG" kernels output "$REF" -p models/kaggle_out/ 2>&1; exit 0 ;;
     *) echo DONE_OTHER; exit 2 ;;
   esac
 done
