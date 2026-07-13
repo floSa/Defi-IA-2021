@@ -107,7 +107,7 @@ def main():
         def compute_loss(self, model, inputs, return_outputs=False, **kw):
             labels = inputs.pop("labels")
             out = model(**inputs)
-            loss = torch.nn.functional.cross_entropy(out.logits, labels, weight=weights.to(out.logits.device))
+            loss = torch.nn.functional.cross_entropy(out.logits.float(), labels, weight=weights.to(out.logits.device))
             return (loss, out) if return_outputs else loss
 
     def metrics(eval_pred):

@@ -95,7 +95,7 @@ def _build_trainer(cfg, train_df, valid_df):
             labels = inputs.pop("labels")
             outputs = model(**inputs)
             weight = class_weights.to(outputs.logits.device) if class_weights is not None else None
-            loss = torch.nn.functional.cross_entropy(outputs.logits, labels, weight=weight)
+            loss = torch.nn.functional.cross_entropy(outputs.logits.float(), labels, weight=weight)
             return (loss, outputs) if return_outputs else loss
 
     def compute_metrics(eval_pred):
