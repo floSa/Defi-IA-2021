@@ -32,13 +32,13 @@ from transformers import (
 
 # ---- knobs -----------------------------------------------------------------
 MODEL_NAME = os.environ.get("MODEL_NAME", "roberta-base")
-MAX_LENGTH = 256
-BATCH_SIZE = 8
-GRAD_ACCUM = 2
-LR = 1e-5
+MAX_LENGTH = 192
+BATCH_SIZE = 32
+GRAD_ACCUM = 1
+LR = 2e-5
 EPOCHS = 3
 SEED = 42
-FULL_TRAIN = True          # final submission: fit all data
+FULL_TRAIN = False         # holdout: real score + save val logits for offline tuning
 VALID_SIZE = 0.15
 NUM_LABELS = 28
 OUT = "/kaggle/working"
@@ -119,7 +119,7 @@ def main():
         output_dir=f"{OUT}/ckpt", per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=BATCH_SIZE * 2, gradient_accumulation_steps=GRAD_ACCUM,
         learning_rate=LR, num_train_epochs=EPOCHS, weight_decay=0.01, warmup_ratio=0.1, max_grad_norm=1.0,
-        fp16=False, eval_strategy="epoch", save_strategy="epoch",
+        fp16=True, eval_strategy="epoch", save_strategy="epoch",
         load_best_model_at_end=True, metric_for_best_model="macro_f1",
         greater_is_better=True, save_total_limit=1, logging_steps=100, report_to="none", seed=SEED,
     )
@@ -140,6 +140,11 @@ def main():
     with open(f"{OUT}/valid_metrics.json", "w") as f:
         json.dump(report, f, indent=2)
     print("VALID METRICS:", report)
+
+    # Save holdout logits + meta so thresholds and the ensemble can be tuned
+    # OFFLINE (zero GPU) against the exact same validation split.
+    np.save(f"{OUT}/valid_logits.npy", val_logits)
+    va[["Category", "gender"]].to_csv(f"{OUT}/valid_meta.csv")
 
     test_ds = make_ds(test, with_labels=False)
     test_logits = trainer.predict(test_ds).predictions
