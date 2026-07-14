@@ -47,3 +47,23 @@ construction spikes >7.4 GB). Confirmed repeatedly on 2026-07-13. Consequences:
   `max_features`; add a Multinomial-NB feature (NB-SVM trick).
 - Fairness track: quantify the `--scrub-gender` accuracy/DI trade-off.
 - Transformer (Step C): DeBERTa-v3-base fine-tune on GPU.
+
+## Ablation study (technique deltas)
+
+Measured on a classical testbed (hashed word+char LinearSVC, 72k/18k stratified
+subsample, zero GPU) while the transformer waits on GPU. Deltas transfer
+qualitatively; augmentation is expected to help the transformer, not the linear
+model.
+
+| Technique | Macro-F1 | delta |
+|---|---:|---:|
+| baseline (argmax) | 0.7420 | — |
+| + per-class threshold tuning | 0.7502 | **+0.0082** |
+| + rare-class augmentation | 0.7392 | -0.0028 |
+| + augmentation + thresholds | 0.7474 | +0.0054 |
+
+**Findings:** (1) threshold tuning is a real, free Macro-F1 lever (+0.8pt) and
+should transfer to the transformer. (2) EDA/counterfactual augmentation *hurts*
+the bag-of-words model (paraphrase diversity is noise to TF-IDF) — it must be
+tested on the contextual transformer, where it is expected to help the rare
+classes, not on the linear model.
