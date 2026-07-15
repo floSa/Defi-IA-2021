@@ -17,7 +17,7 @@ relative deltas are what matter here.
 from __future__ import annotations
 
 import numpy as np
-from scipy.special import log_softmax, softmax
+from scipy.special import log_softmax
 from sklearn.metrics import f1_score
 
 from defi_ia.data.load import load_train

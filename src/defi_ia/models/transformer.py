@@ -29,18 +29,19 @@ import numpy as np
 
 @dataclass
 class TransformerConfig:
-    model_name: str = "answerdotai/ModernBERT-base"
-    max_length: int = 256
-    batch_size: int = 16
-    grad_accum: int = 1          # raise on 8 GB cards to keep effective batch
+    # roberta-base is the proven-stable default; DeBERTa-v3 NaN-diverges on this
+    # stack (see reports/ROADMAP.md §2). fp16 is fine for RoBERTa.
+    model_name: str = "roberta-base"
+    max_length: int = 192
+    batch_size: int = 32
+    grad_accum: int = 1
     learning_rate: float = 2e-5
     epochs: int = 3
     weight_decay: float = 0.01
-    warmup_ratio: float = 0.06
+    warmup_ratio: float = 0.1
     fp16: bool = True
     class_weighted_loss: bool = True
     early_stopping_patience: int = 2
-    eval_steps: int = 500
     seed: int = 42
     output_dir: str = "models/transformer"
     num_labels: int = 28
@@ -113,10 +114,11 @@ def _build_trainer(cfg, train_df, valid_df):
         weight_decay=cfg.weight_decay,
         warmup_ratio=cfg.warmup_ratio,
         fp16=cfg.fp16,
-        eval_strategy="steps",
-        eval_steps=cfg.eval_steps,
-        save_strategy="steps",
-        save_steps=cfg.eval_steps,
+        max_grad_norm=1.0,
+        # Eval per epoch, not per-N-steps: step-wise early stopping killed
+        # training at ~0.13 epoch when Macro-F1 is still ~0 during warmup.
+        eval_strategy="epoch",
+        save_strategy="epoch",
         load_best_model_at_end=True,
         metric_for_best_model="macro_f1",
         greater_is_better=True,
