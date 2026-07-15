@@ -12,6 +12,7 @@ Ground-truth labels' own DI = 3.898.
 | — | 2026-07-13 | word(1–2) + SGD(hinge), balanced | lower | 0.5230 | 9.06 | SGD untuned = poor; abandoned, use LinearSVC |
 | B' | 2026-07-13 | word(1–2)+**hashed** char_wb(2–5) + LinearSVC | lower | 0.7639 | 3.86 | HashingVectorizer = same score as B, bounded RAM → full-data submission now possible locally |
 | C | 2026-07-13 | **roberta-base** fine-tuned (fp32, LR 1e-5, class-weighted, 2 ep) | strip+lower none | **0.8035** | 4.15 | Kaggle T4; loss 6.6->1.0 clean, still rising at ep2; beats classical +4pts, near 2021 top |
+| C-thr | 2026-07-14 | classical wordchar + **per-class threshold tuning** | lower | **0.7714** | — | zero-GPU lever confirmed on full model: 0.7642 -> 0.7714 (+0.7pt); submissions/classical_tuned.csv |
 
 ## ⚠️ Local compute constraint (7.4 GB WSL, no GPU)
 

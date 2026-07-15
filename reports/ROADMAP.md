@@ -16,7 +16,7 @@ desktop, with no Kaggle GPU quota limit. Read this first, then run locally.
 | word TF-IDF + LogReg (baseline) | 0.7335 | 4.10 | — |
 | word+char (hashed) TF-IDF + LinearSVC | 0.764 | 3.86 | `submissions/classical_wordchar_svm.csv` |
 | classical + gender scrubbing (fairness) | 0.760 | **3.49** | — |
-| classical + per-class thresholds | ~0.772 | — | `submissions/classical_tuned.csv` |
+| classical + per-class thresholds | 0.7714 | — | `submissions/classical_tuned.csv` |
 | **RoBERTa-base fine-tuned** | **0.8035** | 4.15 | `submissions/roberta_holdout.csv` |
 | classical + RoBERTa ensemble (blind α) | ? | — | `submissions/ensemble.csv` |
 
