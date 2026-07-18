@@ -84,6 +84,41 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## ⚠️ The disparate-impact metric is gameable — read before optimising it
+
+Found while designing the λ-sweep threshold tuner (ROADMAP §3 item 16), and
+pinned by `tests/test_di_edge_cases.py`.
+
+`macro_disparate_impact` averages `max(M,F)/min(M,F)` per predicted job. For a
+job predicted for a **single gender**, the other column is NaN, and pandas'
+`max`/`min` skip NaN — so both return the same count and the ratio is **1.0,
+i.e. scored as perfect parity**. Concretely:
+
+| predictions | DI |
+|---|---:|
+| job a = 10 M / 1 F, job b = 5 M / 5 F | **5.50** |
+| job a = 11 M / **0 F**, job b = 5 M / 5 F | **1.00** |
+
+Removing every woman from a job *improves* the fairness score by 4.5 points.
+(A job never predicted at all simply drops out of the mean — that case is
+harmless.)
+
+This is inherited from the organisers' reference notebook and **must not be
+"fixed"**: the metric is pinned to their published 3.898171170378378 and is what
+the competition scores. But it has two consequences:
+
+1. **Any procedure that optimises DI directly will find this** — the proposed
+   λ-sweep tuner, adversarial debiasing, or a manual post-processing rule. It
+   would produce an excellent DI that is maximally unfair.
+2. Every fairness number must therefore be reported with
+   `count_single_gender_jobs`. **Current status: 0 of 28 predicted jobs are
+   single-gender on the holdout**, so none of the results in this file are
+   affected — the trap is latent, not sprung.
+
+The docstring in `metrics.py` previously claimed such jobs "drop out of the
+mean", which is not what the code does; corrected without touching the
+computation.
+
 ## Fairness track — Pareto front, full data (2026-07-18)
 
 All five variants fit on the same 184.6k train split and scored on the same

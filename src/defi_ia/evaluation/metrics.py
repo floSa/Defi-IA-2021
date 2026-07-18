@@ -46,11 +46,36 @@ def macro_disparate_impact(jobs: Sequence, genders: Sequence) -> float:
     """
     people = pd.DataFrame({"job": list(jobs), "gender": list(genders)})
     counts = people.groupby(["job", "gender"]).size().unstack("gender")
-    # A job predicted for only one gender has an undefined ratio in the
-    # reference notebook (division by NaN/0). Keep the same behaviour: such
-    # jobs drop out of the mean rather than being clipped.
+    # ⚠️ Two edge cases, both inherited deliberately from the organisers' notebook
+    # (see test_metrics.py, which pins them):
+    #
+    #   * a job that is NEVER predicted has no row at all, so it drops out of
+    #     the mean — harmless;
+    #   * a job predicted for a SINGLE gender has NaN in the other column, and
+    #     pandas' max/min skip NaN, so both return the same count and the ratio
+    #     is **1.0 — scored as perfect parity**, not as maximal unfairness.
+    #
+    # The second one is exploitable: driving a class to a single gender *lowers*
+    # this metric. Any procedure that optimises DI directly will find that, so
+    # report ``count_single_gender_jobs`` alongside DI whenever you do.
     di = counts[["M", "F"]].max(axis="columns") / counts[["M", "F"]].min(axis="columns")
     return float(di.mean())
+
+
+def count_single_gender_jobs(jobs: Sequence, genders: Sequence) -> int:
+    """Number of predicted jobs assigned to exactly one gender.
+
+    A companion diagnostic for :func:`macro_disparate_impact`, which scores such
+    jobs as perfectly fair (ratio 1.0). A fairness result is only trustworthy if
+    this count did not grow: a "better" DI obtained by emptying a class of one
+    gender is the metric being gamed, not fairness being improved.
+    """
+    people = pd.DataFrame({"job": list(jobs), "gender": list(genders)})
+    counts = people.groupby(["job", "gender"]).size().unstack("gender")
+    for col in ("M", "F"):
+        if col not in counts:
+            counts[col] = float("nan")
+    return int(counts[["M", "F"]].isna().any(axis="columns").sum())
 
 
 def evaluate(y_true: Sequence, y_pred: Sequence, genders: Sequence) -> dict[str, float]:

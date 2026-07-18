@@ -1,0 +1,17 @@
+{
+  "seed": 42,
+  "n_rows": 217197,
+  "smoke": false,
+  "runs": [
+    {
+      "name": "baseline (C=1, min_df=5, char 2-5, sublinear)",
+      "select_f1": 0.7525516845943522,
+      "report_f1": 0.7608020289818435,
+      "report_di": 3.8001218954266163,
+      "fit_seconds": 158.7,
+      "n_iter": 266,
+      "max_iter": 1000,
+      "converged": true
+    }
+  ]
+}
