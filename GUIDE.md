@@ -70,18 +70,53 @@ make eda           # dataset summary
   class-balanced LinearSVC. Char n-grams chosen for robustness to noisy text.
 - **2026-07-13** — GPU route decided: **Kaggle Kernels API** primary (see PLAN
   §8). Colab-via-MCP ruled out (no connector, no headless run API).
+- **2026-07-18** — **Every tuned number must be measured on data that did not
+  tune it.** The per-class threshold gain was learned and reported on the same
+  holdout, which overstated it by ×2.2 (+0.0082 claimed → +0.0032 real) and hid
+  a +0.26 disparate-impact cost. `tune_thresholds.py` and `build_ensemble.py`
+  now split validation into calib/eval, report from eval, and refit on
+  everything only for the artifact that ships. Audit:
+  `scripts/audit_threshold_tuning.py`, write-up in `reports/experiments.md`.
+- **2026-07-18** — Checkpoint selection counts as tuning too. `--full` used a
+  sample of the *training* rows as its eval set, so `load_best_model_at_end`
+  picked the most overfit checkpoint. It now holds out 3 % that training never
+  sees.
+- **2026-07-18** — **Smoke test before every long run**, and it earns its keep:
+  `--smoke` caught `np.save` appending `.npy` to the atomic-write temp file,
+  which would have crashed the GPU run *after* training, at the moment it saved
+  its logits. Pinned by `tests/test_atomic_save.py`.
 
-## RESUME HERE (session paused 2026-07-13 evening)
+## RESUME HERE (2026-07-18 evening — desktop, RTX 4060 Ti)
 
-State: RoBERTa-base is training on Kaggle as kernel **flosal/defi-ia-2021-transformer** (v9).
-It runs on Kaggle's servers independently of any local session. DeBERTa-v3 was
-abandoned after repeated fp32 NaN divergence (see experiments log / v7-v8).
+The Kaggle route is retired (GPU quota exhausted). Everything now runs locally.
 
-To resume (one session, from the project root in WSL):
-1. Pull results:  `rm -rf models/kaggle_out && .venv/bin/kaggle kernels output flosal/defi-ia-2021-transformer -p models/kaggle_out/ --force`
-2. Check it trained (loss decreased, no NaN):  inspect `models/kaggle_out/ckpt/*/trainer_state.json` and `models/kaggle_out/valid_metrics.json`.
-3. If good: (a) re-push with FULL_TRAIN=True for the final submission; (b) ensemble:
-   `.venv/bin/python scripts/build_ensemble.py --transformer-logits models/kaggle_out/test_logits.npy --classical-model models/classical_wordchar_svm.joblib --out submissions/ensemble.csv`
-4. Then the fairness-track submission (scrub-gender + name masking).
+**Environment is rebuilt and verified**: `uv venv` + `uv pip install -r
+requirements.txt -e .`; data extracted from the committed
+`defi-ia-insa-toulouse.zip` into `data/raw/`; torch 2.13+cu130 sees the 4060 Ti;
+15 tests green (the disparate-impact metric still reproduces the organisers'
+3.898171170378378 under pandas 3 / sklearn 1.9).
 
-Accuracy safety net already shipped: submissions/classical_wordchar_svm.csv (~0.764 Macro-F1).
+Note `transformers` installs as **5.x**, not the 4.x this code was written for.
+The smoke test confirms training, per-epoch eval, checkpointing and early
+stopping all still work on 5.x.
+
+**The GPU is shared until ~09:30.** `scripts/gpu_queue.sh` waits for utilisation
+to drop below 20 %, then runs the whole sequence unattended:
+
+```bash
+bash scripts/gpu_queue.sh          # waits, then: roberta-base repro ->
+                                   # roberta-large -> deberta-v3 bf16 ->
+                                   # threshold tuning on the winner
+```
+
+Every stage is skipped if its `metrics.json` exists and resumes from its newest
+checkpoint, so re-running the script after any interruption is safe.
+
+Stage 1 reproduces roberta-base and must land near **0.8035**. If it does not,
+something in the stack changed and every later comparison is void — do not skip
+this check.
+
+Accuracy safety net already shipped: submissions/classical_wordchar_svm.csv
+(~0.764 Macro-F1). Note `submissions/classical_tuned.csv` should be expected
+around **0.767**, not the 0.7714 originally logged — see the audit in
+`reports/experiments.md`.
