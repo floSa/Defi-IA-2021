@@ -1,8 +1,7 @@
-# Data (raw files are large and redistribution-restricted)
+# Data (raw files, derived from the pushed zip)
 /data/raw/
 /data/interim/
 /data/processed/
-*.zip
 
 # Artifacts
 /models/*
