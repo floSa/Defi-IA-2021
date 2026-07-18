@@ -84,6 +84,35 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## The stack still reproduces the reference (2026-07-19)
+
+| run | epochs | trajectory (Macro-F1 per epoch) | final | DI |
+|---|---:|---|---:|---:|
+| `roberta_base_repro` | 3 | 0.7462 → 0.7916 → 0.7978 | 0.7978 ⚠ | 4.134 |
+| `roberta_base_6ep` | 6 | 0.7350 → 0.7746 → 0.7798 → 0.7851 → 0.8003 → **0.8027** | 0.8027 ⚠ | 4.108 |
+
+**0.8027 against the Kaggle reference of 0.8035** — a gap of 0.0008. The concern
+that `transformers` resolving to **5.x** (the reference was measured on 4.x)
+might have changed the stack's behaviour is answered: it has not.
+
+Two caveats that the headline number hides:
+
+1. **Not a strict reproduction.** The reference ran fp32 / LR 1e-5 / 2 epochs;
+   this ran fp16 / LR 2e-5 / 6 epochs. Two different routes reaching the same
+   place is reassuring about the stack, but it is not the same experiment, so a
+   discrepancy could not have been attributed to the library version alone.
+2. **Still not converged.** `check_convergence.py` flags both runs: the 6-epoch
+   one was still gaining **+0.0024** on its last epoch. 0.8027 is a tight lower
+   bound, not a ceiling. The marginal gain is collapsing (+0.0062 at 3 epochs,
+   +0.0152 from epoch 4→5, +0.0024 from 5→6), so the plateau is close — the
+   remaining GPU time is worth more on roberta-large than on squeezing this.
+
+**Consequence for the comparison to come:** roberta-large will run the same
+6-epoch budget and, being larger, converges more slowly — so it will be *more*
+penalised by truncation than roberta-base. The asymmetry is usable: if
+roberta-large wins despite that handicap, the conclusion is safe. If it loses
+narrowly, the result is **inconclusive**, not a verdict against it.
+
 ## Transformer runs: two ways a fixed epoch budget lies (2026-07-18/19)
 
 **1. Three epochs was not enough, and the run said so.** roberta-base went
