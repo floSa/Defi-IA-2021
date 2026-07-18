@@ -114,11 +114,22 @@ Rough impact/cost on a 16 GB card (roberta-base, fp16, batch 32, maxlen 192,
 The desktop has a real GPU, so run the transformer **locally** (no Kaggle):
 
 ```bash
-# In the project on the desktop (WSL or native Linux), in the venv:
+# 0. Clone the repo (GitHub does NOT have the data — data/raw/ and *.zip are
+#    gitignored on purpose, see .gitignore: raw competition data is 122 MB and
+#    doesn't belong in git history). You must get the data onto the desktop
+#    yourself, by ONE of:
+#      (a) copy defi-ia-insa-toulouse.zip (44 MB, sits in the project root on
+#          the laptop) to the desktop via USB / OneDrive / network share, or
+#      (b) on the desktop: pip install kaggle, put ~/.kaggle/kaggle.json
+#          (needs a fresh API token from kaggle.com/settings), then
+#          `kaggle competitions download -c defi-ia-insa-toulouse` (verified
+#          working: 42.4 MB pulled in ~4s from this laptop).
+#    Then from the project root:
+mkdir -p data/raw && unzip -o defi-ia-insa-toulouse.zip -d data/raw
+
+# 1. In the project on the desktop (WSL or native Linux), in the venv:
 pip install -r requirements.txt -r requirements-dl.txt   # torch+cuda, transformers, datasets
 python -c "import torch; print(torch.cuda.get_device_name(0), torch.cuda.is_available())"
-
-# Data: ensure data/raw/ has the 5 competition files (unzip defi-ia-insa-toulouse.zip).
 
 # Train RoBERTa locally (proven-stable config lives in scripts/train_transformer.py;
 # it now defaults to roberta-base, fp16, no premature early stopping):
