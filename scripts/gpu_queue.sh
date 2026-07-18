@@ -131,8 +131,16 @@ if [ -n "$best" ]; then
         --classical-model models/classical_wordchar_svm.joblib \
         --out "submissions/${best}_ensemble.csv" >>"$LOG" 2>&1 \
         && log "DONE  ensemble on $best" || log "FAIL  ensemble on $best (see $LOG)"
+    # Tests the falsifiable prediction from reports/error_analysis.md: the
+    # transformer's gain should concentrate in the classes the bag-of-words
+    # confuses with their neighbours. If it does, the ensemble has real diversity
+    # to exploit; if it does not, the models are redundant and the blend will
+    # buy less than the headline gap suggests.
+    $PY scripts/compare_per_class.py --run-dir "models/$best" \
+        --classical-model models/classical_wordchar_svm.joblib >>"$LOG" 2>&1 \
+        && log "DONE  per-class comparison" || log "FAIL  per-class comparison"
   else
-    log "SKIP ensemble (no models/classical_wordchar_svm.joblib)"
+    log "SKIP ensemble + per-class comparison (no classical model)"
   fi
 else
   log "no completed run found — nothing to post-process"
