@@ -5,3 +5,26 @@ weakest classes: pastor, teacher, interior_designer, architect, paralegal
 wrote reports/error_analysis.md
 [21:07:23] DONE  error-analysis ((15s))
 [21:07:23] START fairness-pareto
+train 184,617 / holdout 32,580
+
+  none             Macro-F1 0.7643   DI 3.891   (180s)
+  scrub            Macro-F1 0.7609   DI 3.478   (188s)
+  mask-names       Macro-F1 0.7634   DI 3.875   (192s)
+  scrub+mask       Macro-F1 0.7600   DI 3.526   (192s)
+  counterfactual   Macro-F1 0.7591   DI 3.345   (404s)
+
+======================================================================
+ACCURACY / FAIRNESS TRADE-OFF   (F1 higher better, DI lower better)
+======================================================================
+variant           Macro-F1      ΔF1      DI      ΔDI   F1 cost / DI point
+counterfactual      0.7591  -0.0052   3.345   -0.546                 0.0096
+scrub               0.7609  -0.0035   3.478   -0.413                 0.0084
+scrub+mask          0.7600  -0.0043   3.526   -0.364                 0.0119
+mask-names          0.7634  -0.0010   3.875   -0.015                 0.0645
+none                0.7643  +0.0000   3.891   +0.000                      —
+
+dominated (worse or equal on both axes, never worth shipping): scrub+mask
+
+results -> reports/fairness_pareto.json
+[21:58:44] DONE  fairness-pareto ((3081s))
+[21:58:44] START classical-sweep

@@ -51,6 +51,11 @@ from defi_ia.preprocessing.text import basic_clean, mask_person_names, scrub_gen
 RESULTS = Path("reports/fairness_pareto.json")
 VARIANTS = ["none", "scrub", "mask-names", "scrub+mask", "counterfactual"]
 
+# Seed-to-seed standard deviation of the disparate impact for this model,
+# measured across 3 seeds in scripts/audit_threshold_tuning.py. Differences
+# smaller than this are noise, not findings.
+DI_NOISE_SD = 0.062
+
 
 def _spacy_available() -> bool:
     try:
@@ -171,15 +176,30 @@ def main() -> None:
             print(f"{r['variant']:<16} {r['macro_f1']:9.4f} {'':>8} "
                   f"{r['disparate_impact']:7.3f}")
 
-    # A variant that is worse on BOTH axes than another is never the right ship.
+    # Single-seed measurements. The threshold audit put the seed-to-seed sd of DI
+    # on this model at ~0.06, so smaller gaps are not distinguishable from noise
+    # and must not be reported as findings.
+    print(f"\n⚠ single seed ({args.seed}). Seed-to-seed sd of DI on this model is "
+          f"~{DI_NOISE_SD:.2f},")
+    print("  so any ΔDI below that is indistinguishable from noise.")
+
+    if base:
+        negligible = [r["variant"] for r in runs if r["variant"] != "none"
+                      and abs(r["disparate_impact"] - base["disparate_impact"]) < DI_NOISE_SD]
+        if negligible:
+            print(f"  within the noise band, i.e. no measurable effect: {', '.join(negligible)}")
+
+    # A variant worse on BOTH axes than another is never the right ship — but only
+    # call it that when the fairness gap clears the noise floor.
     dominated = [
         r["variant"] for r in runs
-        if any(o["macro_f1"] >= r["macro_f1"] and o["disparate_impact"] <= r["disparate_impact"]
-               and o["variant"] != r["variant"] for o in runs)
+        if any(o["variant"] != r["variant"]
+               and o["macro_f1"] >= r["macro_f1"]
+               and r["disparate_impact"] - o["disparate_impact"] > DI_NOISE_SD
+               for o in runs)
     ]
     if dominated:
-        print(f"\ndominated (worse or equal on both axes, never worth shipping): "
-              f"{', '.join(dominated)}")
+        print(f"\ndominated beyond the noise floor (worse on both axes): {', '.join(dominated)}")
     print(f"\nresults -> {out_path}")
 
 

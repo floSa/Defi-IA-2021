@@ -84,13 +84,46 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
-## Fairness track (Pareto so far)
+## Fairness track — Pareto front, full data (2026-07-18)
 
-| variant | Macro-F1 | DI |
-|---|---:|---:|
-| no mitigation (B) | 0.7641 | 3.85 |
-| gender scrubbing | 0.7601 | 3.49 |
-| + name masking (NER) | *todo* | *todo* |
+All five variants fit on the same 184.6k train split and scored on the same
+32.6k holdout, so the numbers are directly comparable. No variant was used to
+select anything, so none carries selection bias.
+(`scripts/fairness_pareto.py`, results in `reports/fairness_pareto.json`.)
+
+| variant | Macro-F1 | ΔF1 | DI | ΔDI | F1 cost per DI point |
+|---|---:|---:|---:|---:|---:|
+| none | 0.7643 | — | 3.891 | — | — |
+| name masking (NER) | 0.7634 | −0.0010 | 3.875 | −0.015 | 0.065 |
+| **gender scrubbing** | 0.7609 | −0.0035 | **3.478** | −0.413 | **0.008** |
+| scrubbing + masking | 0.7600 | −0.0043 | 3.526 | −0.364 | 0.012 |
+| **counterfactual training** | 0.7591 | −0.0052 | **3.345** | **−0.546** | 0.010 |
+
+**⚠️ Noise floor.** These are single-seed measurements. The threshold audit gave
+a seed-to-seed sd of **0.062 DI** on this model, so any DI difference below
+~0.06 is not distinguishable from noise. Read the table accordingly:
+
+- **Counterfactual training and gender scrubbing are real, large effects**
+  (−0.55 and −0.41 DI, both far outside the noise band). Counterfactual reaches
+  the lowest DI; scrubbing has the slightly better exchange rate.
+- **Name masking does essentially nothing** (−0.015 DI, well inside the noise).
+  This closes a *todo* that had been open since the start of the project. The
+  hypothesis was that first names leak gender as strongly as pronouns do; on
+  this data, once pronouns are present, masking names buys no measurable
+  fairness. Not worth the spaCy dependency and the extra 190 s per fit.
+- **"scrubbing + masking" vs "scrubbing" is within noise** (ΔDI 0.048 < 0.06).
+  The script flags the combination as dominated, but on one seed that verdict
+  is not safe — it should be re-run across seeds before being acted on. What
+  *is* safe: adding masking on top of scrubbing does not help.
+
+**Shipping recommendation:** counterfactual training for the fairness-track
+submission (best DI, and it *adds* signal instead of removing it, so the test
+text stays untouched), with gender scrubbing as the cheaper alternative if the
+0.5 pt of Macro-F1 matters more than the last 0.13 of DI. The accuracy track
+keeps no mitigation.
+
+Both mitigations are worth re-testing on the transformer: it can exploit context
+that a bag-of-words cannot, so the accuracy cost may well be smaller there.
 
 ## Next candidates
 
