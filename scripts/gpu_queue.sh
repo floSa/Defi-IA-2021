@@ -97,9 +97,23 @@ EOF
 )
 if [ -n "$best" ]; then
   log "best backbone: $best — running threshold tuning + ensemble on it"
+
   $PY scripts/tune_thresholds.py --run-dir "models/$best" \
       --out "submissions/${best}_tuned.csv" >>"$LOG" 2>&1 \
       && log "DONE  thresholds on $best" || log "FAIL  thresholds on $best"
+
+  # The ensemble needs a classical model blind to the transformer's validation
+  # rows. train_classical.py without --full and train_transformer.py without
+  # --full both use stratified_holdout(0.15, seed 42), so the splits line up.
+  # build_ensemble.py verifies this itself and refuses to run if they do not.
+  if [ -f models/classical_wordchar_svm.joblib ]; then
+    $PY scripts/build_ensemble.py --run-dir "models/$best" \
+        --classical-model models/classical_wordchar_svm.joblib \
+        --out "submissions/${best}_ensemble.csv" >>"$LOG" 2>&1 \
+        && log "DONE  ensemble on $best" || log "FAIL  ensemble on $best (see $LOG)"
+  else
+    log "SKIP ensemble (no models/classical_wordchar_svm.joblib)"
+  fi
 else
   log "no completed run found — nothing to post-process"
 fi
