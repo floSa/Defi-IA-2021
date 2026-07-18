@@ -25,3 +25,6 @@ venv/
 .idea/
 .vscode/
 logs/
+
+# Run logs
+logs_*.txt
