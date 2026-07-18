@@ -12,6 +12,16 @@
       "n_iter": 266,
       "max_iter": 1000,
       "converged": true
+    },
+    {
+      "name": "C=0.5",
+      "select_f1": 0.7553937868350248,
+      "report_f1": 0.7602627650872683,
+      "report_di": 3.6825403689258374,
+      "fit_seconds": 132.0,
+      "n_iter": 141,
+      "max_iter": 1000,
+      "converged": true
     }
   ]
 }

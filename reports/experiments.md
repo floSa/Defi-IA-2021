@@ -160,6 +160,56 @@ keeps no mitigation.
 Both mitigations are worth re-testing on the transformer: it can exploit context
 that a bag-of-words cannot, so the accuracy cost may well be smaller there.
 
+## Threshold-only fairness front, and a caveat on the threshold gain itself
+
+`scripts/threshold_fairness_front.py` runs the per-class bias search against
+`Macro-F1 − λ·DI` and sweeps λ. Bias fitted on one half of the holdout (16.3k),
+every number below read off the other half (16.3k). **0 single-gender jobs at
+every λ**, so the gaming vector above was not triggered and these DI values are
+honest.
+
+| | Macro-F1 | ΔF1 | DI | ΔDI |
+|---|---:|---:|---:|---:|
+| argmax | 0.7653 | — | 4.105 | — |
+| λ = 0 (pure Macro-F1) | 0.7623 | **−0.0030** | 4.444 | +0.339 |
+| λ = 0.005 | 0.7663 | +0.0010 | 4.395 | +0.289 |
+| λ = 0.01 | 0.7658 | +0.0005 | 4.337 | +0.231 |
+| λ = 0.02 | 0.7611 | −0.0042 | 4.122 | +0.016 |
+| **λ = 0.05** | 0.7509 | −0.0144 | **3.554** | **−0.552** |
+| λ = 0.1 | 0.7219 | −0.0434 | 3.610 | −0.495 |
+
+**1. The threshold gain depends on how much calibration data it gets.** At λ=0
+this run measures **−0.0030** — the technique *hurts* — where the nested audit
+measured **+0.0032**. The difference is the calibration set: 16.3k rows here
+versus 32.6k there. Halve the data behind 28 free parameters and the gain flips
+sign. Single seed, so the exact value is soft, but the direction matters.
+
+There is an asymmetry worth being precise about: an honest *measurement* must
+hold half the validation data back, while *deployment* refits the bias on all of
+it. So the measured figure is a **lower bound** on what ships, not an estimate
+of it. The practical reading: the deployed gain is somewhere between −0.003 and
++0.003, i.e. **indistinguishable from zero**, and certainly not the +0.008
+originally published.
+
+**2. Thresholds are a poor fairness lever compared with counterfactual
+training.** Both reach roughly the same DI, at very different prices:
+
+| lever | ΔDI | ΔF1 | F1 cost per DI point |
+|---|---:|---:|---:|
+| counterfactual training | −0.546 | −0.0052 | **0.010** |
+| threshold tuning, λ=0.05 | −0.552 | −0.0144 | 0.026 |
+
+Counterfactual training is about **2.6× more efficient**. It changes what the
+model learns; thresholding only redistributes a fixed set of scores, and pays
+for every DI point with real accuracy. Ship the counterfactual model for the
+fairness track.
+
+**3. The front is not monotone** — λ=0.1 is worse than λ=0.05 on *both* axes.
+Coordinate ascent is greedy and the objective gets harder as λ grows, so it
+lands in worse local optima. Do not read the λ=0.1 row as a reachable
+trade-off; it is a search failure, and a reminder that the front's shape is a
+property of the optimiser as much as of the problem.
+
 ## Next candidates
 
 - Classical tuning: `min_df`, `C`, `sublinear_tf`, char range (3–5), TF-IDF
