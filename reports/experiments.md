@@ -157,10 +157,26 @@ disparate impact for the tuned predictions.
 | argmax | 3.87 |
 | + tuned thresholds | 4.14 (**+0.262**, sd 0.062) |
 
-Mechanically this is expected: thresholding pushes predictions into rare
-classes, and rare jobs are the gender-skewed ones, so their max/min ratios rise.
+The mechanism is now measured rather than assumed (`reports/error_analysis.md`):
+**rare jobs are the gender-skewed ones.**
+
+| | mean per-job DI ratio |
+|---|---:|
+| 10 rarest jobs | **5.36** |
+| 10 most frequent jobs | **3.03** |
+
+Spearman correlation between support and DI ratio is **−0.387**. The worst
+offenders are `dietitian` (12.0), `nurse` (10.1), `rapper` (9.9), `model` (6.7),
+`dj` (6.7) — mostly rare, all strongly stereotyped. Threshold tuning exists
+precisely to push more predictions into rare classes, so it feeds the most
+skewed jobs and drags the average of the ratios up. The +0.26 DI is not a
+side-effect to be engineered away; it is what the technique does.
+
 Since DI is the **tie-break for the top 10**, a +0.3 pt Macro-F1 gain bought
-with +0.26 DI is a trade-off to decide deliberately, not a free lever.
+with +0.26 DI is a trade-off to decide deliberately, not a free lever. ROADMAP
+§3 item 16 proposes the fix: run the same coordinate ascent against
+`Macro-F1 − λ·DI` and sweep λ, which traces the whole front from one set of
+saved logits at zero GPU cost.
 
 **Consequences:**
 - `submissions/classical_tuned.csv` should be expected to score ≈ **0.767**, not
