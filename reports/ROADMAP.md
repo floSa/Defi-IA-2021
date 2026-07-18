@@ -112,9 +112,40 @@ Rough impact/cost on a 16 GB card (roberta-base, fp16, batch 32, maxlen 192,
 - Best α for the classical+transformer ensemble on holdout?
 - Can DeBERTa-v3(-large) be stabilised (bf16 on the 4060 Ti, which supports it —
   T4 did not)? If so it likely beats roberta-large.
-- How much does threshold tuning give on the transformer vs the +0.8pt classical?
+- How much does threshold tuning give on the transformer? Budget **+0.3 pt**, not
+  +0.8 — and measure the DI cost, which was +0.26 on the classical model.
 - Optimal max_length: p95 = 116 words (~150 tokens); is 192 enough or does 256 help?
 - Class-weight scheme: full inverse-freq vs sqrt+clip (current) vs none — which best for Macro-F1?
+
+---
+
+## 4b. Measurement discipline (2026-07-18)
+
+Three published numbers on this project turned out to be measured on the data
+that produced them. The rule that follows: **anything fitted, tuned, or selected
+must be scored on rows that played no part in fitting, tuning or selecting it.**
+That covers more than it first appears — threshold biases, blend weights,
+hyper-parameter choices, *and* the choice of which checkpoint to keep.
+
+Tooling that now enforces it, all zero-GPU and all with `--smoke`:
+
+| script | what it measures | discipline built in |
+|---|---|---|
+| `audit_threshold_tuning.py` | the real threshold gain | fit / calib / eval, 3 seeds, prints the optimism of the old method |
+| `tune_thresholds.py` | deployed per-class bias | splits validation in half; refits on all rows only for the shipped artifact |
+| `build_ensemble.py` | blend weight α | α swept on one half, judged on the other; refuses to run if the classical model was fit on those rows |
+| `sweep_classical.py` | hyper-parameters | fit / select / report; **excludes configs that hit `max_iter`** rather than ranking unconverged fits |
+| `fairness_pareto.py` | accuracy/fairness trade-off | no selection at all — every variant reported on the same unseen rows |
+| `error_analysis.py` | per-class F1 and DI drivers | reads a model fit on the training split only |
+
+Two habits that paid for themselves within the hour:
+
+- **Reproduce the reference before comparing anything.** The classical baseline
+  re-ran at 0.7643 vs 0.7641 logged, which is what licenses trusting every other
+  number measured on this rebuilt stack.
+- **Smoke test before every long run.** `--smoke` caught an `np.save` filename
+  bug that would have crashed the GPU run *after* training, at the moment it
+  wrote its logits.
 
 ---
 
@@ -123,22 +154,22 @@ Rough impact/cost on a 16 GB card (roberta-base, fp16, batch 32, maxlen 192,
 The desktop has a real GPU, so run the transformer **locally** (no Kaggle):
 
 ```bash
-# 0. Clone the repo (GitHub does NOT have the data — data/raw/ and *.zip are
-#    gitignored on purpose, see .gitignore: raw competition data is 122 MB and
-#    doesn't belong in git history). You must get the data onto the desktop
-#    yourself, by ONE of:
-#      (a) copy defi-ia-insa-toulouse.zip (44 MB, sits in the project root on
-#          the laptop) to the desktop via USB / OneDrive / network share, or
-#      (b) on the desktop: pip install kaggle, put ~/.kaggle/kaggle.json
-#          (needs a fresh API token from kaggle.com/settings), then
-#          `kaggle competitions download -c defi-ia-insa-toulouse` (verified
-#          working: 42.4 MB pulled in ~4s from this laptop).
-#    Then from the project root:
-mkdir -p data/raw && unzip -o defi-ia-insa-toulouse.zip -d data/raw
+# 0. Data: defi-ia-insa-toulouse.zip (44 MB) IS committed to the repo as of
+#    2026-07-18, so a clone brings it. Extract it (there is no `unzip` on a bare
+#    WSL install, hence python):
+python -c "import zipfile; zipfile.ZipFile('defi-ia-insa-toulouse.zip').extractall('data/raw')"
+#    Expect 5 files in data/raw/: train.json (95.9 MB), test.json (23.9 MB),
+#    train_label.csv, categories_string.csv, template_submissions.csv.
 
-# 1. In the project on the desktop (WSL or native Linux), in the venv:
-pip install -r requirements.txt -r requirements-dl.txt   # torch+cuda, transformers, datasets
-python -c "import torch; print(torch.cuda.get_device_name(0), torch.cuda.is_available())"
+# 1. Environment (uv, per the machine's convention — plain venv is broken there):
+uv venv --python 3.12
+uv pip install -r requirements.txt && uv pip install -e . --no-deps
+uv pip install torch transformers datasets accelerate    # torch ships CUDA on linux
+.venv/bin/python -c "import torch; print(torch.cuda.get_device_name(0), torch.cuda.is_available())"
+# Verified 2026-07-18: torch 2.13.0+cu130 sees the RTX 4060 Ti.
+# NOTE: transformers resolves to 5.x, not the 4.x this code was written against.
+# The smoke test confirms training, per-epoch eval, checkpointing and early
+# stopping still work — run it before trusting a long job.
 
 # Train RoBERTa locally (proven-stable config lives in scripts/train_transformer.py;
 # it now defaults to roberta-base, fp16, no premature early stopping):
