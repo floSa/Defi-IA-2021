@@ -84,6 +84,31 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## Transformer runs: two ways a fixed epoch budget lies (2026-07-18/19)
+
+**1. Three epochs was not enough, and the run said so.** roberta-base went
+0.7462 → 0.7916 → 0.7978 and was **still rising by +0.0062 on its final epoch**.
+Its 0.7978 is a lower bound, not a result. Had roberta-large been run against it
+at the same 3-epoch budget, the larger model — which needs *more* epochs, not
+fewer — would very likely have "lost", and the conclusion would have been the
+exact opposite of the truth. `scripts/check_convergence.py` flags this
+automatically from the per-epoch history, and `gpu_queue.sh` now excludes
+truncated runs from the ranking.
+
+Budget raised to 6 epochs with early stopping (patience 2), so each model stops
+at **its own** plateau rather than at a shared arbitrary ceiling.
+
+**2. The same epoch number means different things under different budgets.** At
+epoch 3, the 3-epoch run scored 0.7978 and the 6-epoch run only 0.7798 — the
+*same model on the same data*. Nothing regressed: the learning rate decays
+across the whole planned schedule, so at 3-of-3 the LR had annealed to ~0 while
+at 3-of-6 it is still near half its peak. A model mid-schedule is not a model
+that has finished.
+
+Practical rule: **never compare two runs epoch-by-epoch when their total budgets
+differ.** Only the final, post-decay score is comparable — and only if both runs
+converged.
+
 ## Negative result: no classical hyper-parameter beats the default (2026-07-18)
 
 11 configs, one change at a time from the current default, full 217k data,
