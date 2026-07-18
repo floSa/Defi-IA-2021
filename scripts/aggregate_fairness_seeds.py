@@ -47,6 +47,10 @@ def main() -> None:
                 if all(v in per_seed[s] for s in seeds)]
     print(f"{len(seeds)} seeds: {seeds}")
 
+    def sd(a: np.ndarray) -> float:
+        """Sample sd, or 0 when a single seed leaves nothing to spread."""
+        return float(a.std(ddof=1)) if len(seeds) > 1 else 0.0
+
     rows = []
     for v in variants:
         # Paired deltas: each seed compared against its OWN baseline, so the
@@ -57,7 +61,6 @@ def main() -> None:
                          - per_seed[s]["none"]["disparate_impact"] for s in seeds])
         f1 = np.array([per_seed[s][v]["macro_f1"] for s in seeds])
         di = np.array([per_seed[s][v]["disparate_impact"] for s in seeds])
-        sd = (lambda a: float(a.std(ddof=1)) if len(seeds) > 1 else 0.0)
         rows.append({"variant": v,
                      "f1": f1.mean(), "f1_sd": sd(f1),
                      "di": di.mean(), "di_sd": sd(di),
