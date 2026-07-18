@@ -100,9 +100,19 @@ Rough impact/cost on a 16 GB card (roberta-base, fp16, batch 32, maxlen 192,
 
 **Fairness track**
 13. **Counterfactual training**: train on gender-swapped duplicates → job becomes
-    gender-invariant → lowers disparate impact. Already have the augmenter.
+    gender-invariant → lowers disparate impact. Already have the augmenter, and
+    `fairness_pareto.py` measures it.
 14. **Adversarial debiasing** (gradient-reversal gender head) — advanced.
 15. Report the **accuracy/fairness Pareto front**; pick the shipped submission.
+16. **Fairness-objective threshold tuning** — new, suggested by the audit. The
+    per-class bias search currently maximises Macro-F1 and, as a side effect,
+    pushes DI from 3.87 to 4.14. The same coordinate ascent can optimise
+    `Macro-F1 − λ·DI` instead: sweeping λ traces a whole accuracy/fairness front
+    from one set of saved logits, at zero GPU cost and no retraining. That makes
+    the *same* machinery serve both tracks — Macro-F1 at λ=0 for the leaderboard
+    submission, a larger λ for the fairness submission. PLAN.md §5.2 already
+    called for threshold post-processing as a fairness lever; this is the
+    concrete form of it.
 
 ---
 
