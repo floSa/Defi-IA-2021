@@ -101,19 +101,31 @@ def main() -> None:
     if p_t.shape != p_c.shape:
         raise ValueError(f"shape mismatch: transformer {p_t.shape} vs classical {p_c.shape}")
 
-    # A classical model that trained on these rows scores absurdly well on them.
-    # That is the signature of the --full model being passed in by mistake, which
-    # would silently corrupt every alpha below.
+    # A classical model that trained on these rows scores far above its true
+    # holdout level on them. That is the signature of a --full fit being passed
+    # in by mistake, which would silently corrupt every alpha below.
+    #
+    # The threshold sits between the model's genuine holdout score (~0.764) and
+    # the ~0.98 it reaches on rows it memorised. It has to catch *partial*
+    # contamination too: a transformer run with --full holds out 3 % drawn from
+    # all 217k rows, ~85 % of which the classical model already trained on, which
+    # inflates the score without pushing it near 1.0.
+    CLASSICAL_HOLDOUT_F1 = 0.764
+    CONTAMINATION_F1 = 0.85
     f1_c = f1_score(y, p_c.argmax(1), average="macro")
     f1_t = f1_score(y, p_t.argmax(1), average="macro")
     print(f"on {len(y):,} validation rows:  classical {f1_c:.4f}   transformer {f1_t:.4f}")
-    if f1_c > 0.95 and not args.assume_classical_is_blind:
+    if f1_c > CONTAMINATION_F1 and not args.assume_classical_is_blind:
         raise SystemExit(
-            f"\nclassical Macro-F1 is {f1_c:.4f} on these rows — it was almost certainly\n"
-            "trained on them (a --full fit). Its probabilities here are memorised, not\n"
-            "predicted, so any alpha swept against them is meaningless.\n"
-            "Refit the classical model on the same split as the transformer, or pass\n"
-            "--assume-classical-is-blind if you are certain this is a genuine holdout."
+            f"\nclassical Macro-F1 is {f1_c:.4f} on these rows, well above the ~"
+            f"{CLASSICAL_HOLDOUT_F1:.3f} it\nscores on a genuine holdout. It has very likely "
+            "trained on some or all of\nthem, so its probabilities here are partly memorised "
+            "rather than predicted\nand any alpha swept against them is meaningless.\n\n"
+            "Fix: refit the classical model on the SAME split as the transformer:\n"
+            "  .venv/bin/python scripts/train_classical.py \\\n"
+            "      --save-model models/classical_holdout.joblib\n"
+            "(both default to stratified_holdout(0.15, seed 42), so the rows line up).\n"
+            "Or pass --assume-classical-is-blind if you are certain this is a real holdout."
         )
 
     if args.alpha is not None:
