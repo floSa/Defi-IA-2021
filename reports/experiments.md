@@ -68,3 +68,54 @@ should transfer to the transformer. (2) EDA/counterfactual augmentation *hurts*
 the bag-of-words model (paraphrase diversity is noise to TF-IDF) — it must be
 tested on the contextual transformer, where it is expected to help the rare
 classes, not on the linear model.
+
+> ⚠️ **Finding (1) above is retracted — see the audit below.** The +0.8 pt was
+> measured on the same rows that chose the thresholds. The real gain is +0.3 pt.
+
+## ⚠️ Audit: the threshold-tuning gain was measured in-sample (2026-07-18)
+
+`tune_thresholds.py:68-69` and `ablation_classical.py:87-88` learned the
+per-class bias on the holdout and then reported Macro-F1 **on that same
+holdout**. The search has 28 free parameters over a 33-point grid for up to 12
+rounds — ample capacity to fit one split's noise. Every "+0.8 pt" figure in this
+file and in ROADMAP §2 carried that optimism.
+
+Re-measured honestly with a nested split (`scripts/audit_threshold_tuning.py`):
+the classical model is fit on 152k rows, the bias is tuned on a 32.6k
+**calibration** set, and the score is reported on a 32.6k **eval** set that
+neither the model nor the tuner ever saw. Three seeds.
+
+| | Macro-F1 delta | sd (3 seeds) |
+|---|---:|---:|
+| tuned on calib, judged on eval — **the real gain** | **+0.0032** | 0.0009 |
+| tuned on eval, judged on eval — the old methodology | +0.0071 | 0.0014 |
+| what the tuner believes it achieved, on its own calib rows | +0.0074 | — |
+
+The old method **overstates the gain by ×2.2**. The tuner's self-report
+(+0.0074) lands on the ROADMAP's published +0.0082, which corroborates that the
+published figure is the self-reported one rather than a generalising estimate.
+
+**The gain is real but small**: +0.0032 with a seed-to-seed sd of 0.0009 is
+consistently positive, so this is not noise — it is simply a third of what was
+claimed.
+
+**It also costs fairness, which was never measured**: the old script computed no
+disparate impact for the tuned predictions.
+
+| | DI (lower = fairer) |
+|---|---:|
+| argmax | 3.87 |
+| + tuned thresholds | 4.14 (**+0.262**, sd 0.062) |
+
+Mechanically this is expected: thresholding pushes predictions into rare
+classes, and rare jobs are the gender-skewed ones, so their max/min ratios rise.
+Since DI is the **tie-break for the top 10**, a +0.3 pt Macro-F1 gain bought
+with +0.26 DI is a trade-off to decide deliberately, not a free lever.
+
+**Consequences:**
+- `submissions/classical_tuned.csv` should be expected to score ≈ **0.767**, not
+  the 0.7714 logged in row C-thr.
+- Threshold tuning stays worth applying to the transformer (Tier 1), but budget
+  +0.3 pt, and re-check the DI cost there.
+- `tune_thresholds.py` now splits the validation set in half — tunes on one,
+  reports on the other — and refits on everything only for the deployed bias.

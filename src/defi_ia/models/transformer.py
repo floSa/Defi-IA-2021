@@ -40,8 +40,17 @@ class TransformerConfig:
     weight_decay: float = 0.01
     warmup_ratio: float = 0.1
     fp16: bool = True
+    # The 4060 Ti (Ada) supports bf16, which the T4 did not. bf16 has the same
+    # dynamic range as fp32, so it is the lever to try if a model NaN-diverges
+    # (DeBERTa-v3, see reports/ROADMAP.md §2). Mutually exclusive with fp16.
+    bf16: bool = False
+    use_cpu: bool = False
     class_weighted_loss: bool = True
     early_stopping_patience: int = 2
+    # Selecting the best checkpoint requires a validation set the model has NOT
+    # trained on; callers that cannot provide one must turn this off rather than
+    # select on seen data.
+    load_best: bool = True
     seed: int = 42
     output_dir: str = "models/transformer"
     num_labels: int = 28
@@ -113,13 +122,15 @@ def _build_trainer(cfg, train_df, valid_df):
         num_train_epochs=cfg.epochs,
         weight_decay=cfg.weight_decay,
         warmup_ratio=cfg.warmup_ratio,
-        fp16=cfg.fp16,
+        fp16=cfg.fp16 and not cfg.use_cpu,
+        bf16=cfg.bf16 and not cfg.use_cpu,
+        use_cpu=cfg.use_cpu,
         max_grad_norm=1.0,
         # Eval per epoch, not per-N-steps: step-wise early stopping killed
         # training at ~0.13 epoch when Macro-F1 is still ~0 during warmup.
         eval_strategy="epoch",
         save_strategy="epoch",
-        load_best_model_at_end=True,
+        load_best_model_at_end=cfg.load_best,
         metric_for_best_model="macro_f1",
         greater_is_better=True,
         save_total_limit=2,
@@ -128,6 +139,12 @@ def _build_trainer(cfg, train_df, valid_df):
         seed=cfg.seed,
     )
 
+    # Early stopping only makes sense when checkpoints are being compared on a
+    # genuinely held-out set; without load_best it would just truncate training.
+    callbacks = []
+    if cfg.load_best and cfg.early_stopping_patience > 0:
+        callbacks.append(EarlyStoppingCallback(early_stopping_patience=cfg.early_stopping_patience))
+
     return WeightedTrainer(
         model=model,
         args=args,
@@ -135,15 +152,32 @@ def _build_trainer(cfg, train_df, valid_df):
         eval_dataset=valid_ds,
         data_collator=DataCollatorWithPadding(tokenizer),
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=cfg.early_stopping_patience)],
+        callbacks=callbacks,
     ), tokenizer
 
 
-def fine_tune(cfg: TransformerConfig, train_df, valid_df):
-    """Fine-tune and return ``(trainer, tokenizer)``. GPU required."""
+def fine_tune(cfg: TransformerConfig, train_df, valid_df, resume: bool = False):
+    """Fine-tune and return ``(trainer, tokenizer)``. GPU required (unless use_cpu).
+
+    ``resume=True`` picks training back up from the newest checkpoint in
+    ``cfg.output_dir`` — a multi-hour run must survive being killed.
+    """
     trainer, tokenizer = _build_trainer(cfg, train_df, valid_df)
-    trainer.train()
+    ckpt = _latest_checkpoint(cfg.output_dir) if resume else None
+    if ckpt:
+        print(f"  resuming from {ckpt}")
+    trainer.train(resume_from_checkpoint=ckpt)
     return trainer, tokenizer
+
+
+def _latest_checkpoint(output_dir: str) -> str | None:
+    """Newest ``checkpoint-<step>`` directory, or None if there is nothing to resume."""
+    from pathlib import Path
+
+    ckpts = [d for d in Path(output_dir).glob("checkpoint-*") if d.is_dir()]
+    if not ckpts:
+        return None
+    return str(max(ckpts, key=lambda d: int(d.name.split("-")[-1])))
 
 
 def predict_logits(trainer, tokenizer, texts, max_length: int, batch_size: int = 64):

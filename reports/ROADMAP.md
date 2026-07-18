@@ -38,13 +38,22 @@ Full log: [`reports/experiments.md`](experiments.md). Milestones/decision log:
 **Ablation (classical testbed, zero-GPU, 72k/18k subsample)**
 | Technique | Macro-F1 delta |
 |---|---:|
-| per-class threshold tuning | **+0.0082** (real lever) |
+| per-class threshold tuning | ~~+0.0082~~ → **+0.0032** after audit (see below) |
 | rare-class augmentation (EDA + gender-counterfactual) | −0.0028 (hurts the *linear* model) |
 
-Verdict: **threshold tuning is a free, real Macro-F1 lever** — apply it to the
-transformer. **Augmentation hurts bag-of-words** (paraphrase = noise to TF-IDF)
-but is expected to **help the contextual transformer**, especially rare classes
-— that is the #1 thing to verify on the 4060 Ti.
+> ⚠️ **Corrected 2026-07-18.** The +0.0082 was tuned and evaluated on the same
+> holdout. Nested re-measurement on the full 217k (3 seeds, fit 152k / calib 33k
+> / eval 33k) gives a **real gain of +0.0032 ± 0.0009** — the old method
+> overstates by ×2.2 — and the technique **worsens disparate impact by +0.26**,
+> which was never measured. Full write-up in [`experiments.md`](experiments.md);
+> reproduce with `scripts/audit_threshold_tuning.py`.
+
+Verdict: threshold tuning is a **real but small** Macro-F1 lever (+0.3 pt, not
++0.8 pt) that **costs fairness**. Still worth applying to the transformer, but
+budget the smaller gain and re-check DI — DI is the top-10 tie-break.
+**Augmentation hurts bag-of-words** (paraphrase = noise to TF-IDF) but is
+expected to **help the contextual transformer**, especially rare classes — that
+is the #1 thing to verify on the 4060 Ti.
 
 **Infra lessons (do not re-learn these):**
 - Kaggle assigns a **P100** by default whose sm_60 the current PyTorch build no
