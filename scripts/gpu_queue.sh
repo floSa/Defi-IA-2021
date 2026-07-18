@@ -26,14 +26,26 @@ log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 # Utilisation, not free VRAM, is the binding constraint: 7 GB can be free while
 # the card is at 100 % compute, and starting there halves both jobs' throughput.
 wait_for_gpu() {
-  log "waiting for GPU utilisation to drop below 20% (checking every 5 min)…"
+  # Require the card to stay quiet across several consecutive checks. A single
+  # reading below the threshold is not enough: the neighbouring job dips to near
+  # zero between epochs and while it saves checkpoints, and starting in one of
+  # those gaps would put both jobs back in contention.
+  local needed=4 interval=120 quiet=0 util
+  log "waiting for GPU util <20% for ${needed} consecutive checks ${interval}s apart…"
   while true; do
-    util=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits | head -1)
-    if [ "${util:-100}" -lt 20 ]; then
-      log "GPU free (util ${util}%) — starting"
-      return 0
+    util=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | head -1)
+    if [ -n "${util:-}" ] && [ "$util" -lt 20 ]; then
+      quiet=$((quiet + 1))
+      log "  quiet reading ${quiet}/${needed} (util ${util}%)"
+      if [ "$quiet" -ge "$needed" ]; then
+        log "GPU free — starting"
+        return 0
+      fi
+    elif [ "$quiet" -gt 0 ]; then
+      log "  busy again (util ${util:-?}%) — resetting the quiet counter"
+      quiet=0
     fi
-    sleep 300
+    sleep "$interval"
   done
 }
 
