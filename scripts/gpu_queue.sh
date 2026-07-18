@@ -93,7 +93,15 @@ stage deberta_v3_bf16 $PY scripts/train_transformer.py \
   --model microsoft/deberta-v3-base --run-name deberta_v3_bf16 \
   --batch-size 16 --grad-accum 2 --max-length 192 --epochs 3 --lr 5e-6 --bf16 --resume
 
-# 4. Zero-GPU post-processing on whichever backbone won.
+# 4. Before ranking anything: did these runs actually finish learning? A model
+#    whose best epoch is its last was still improving, so comparing it at a fixed
+#    epoch budget measures the budget rather than the model. roberta-base was
+#    already "still rising at epoch 2" on Kaggle, and roberta-large needs more
+#    epochs than roberta-base, so this is a live risk here, not a formality.
+log "--- convergence check ---"
+$PY scripts/check_convergence.py 2>&1 | tee -a "$LOG" | tail -20
+
+# 5. Zero-GPU post-processing on whichever backbone won.
 best=$($PY - <<'EOF'
 import json, pathlib
 runs = []
