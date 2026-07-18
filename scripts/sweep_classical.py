@@ -175,15 +175,31 @@ def main() -> None:
     print(f"\nchosen on the select split : {winner['name']}")
     print(f"  select Macro-F1 {winner['select_f1']:.4f}")
     print(f"  report Macro-F1 {winner['report_f1']:.4f}   <- the honest score")
-    print(f"  selection bias  {winner['select_f1'] - winner['report_f1']:+.4f} "
-          "(what picking the max of a noisy set buys you for free)")
     print(f"  disparate imp.  {winner['report_di']:.3f}")
+
     if baseline and winner["name"] != baseline["name"]:
-        gain = winner["report_f1"] - baseline["report_f1"]
-        print(f"\n  vs baseline on the report split: {gain:+.4f}")
-        if gain <= 0:
-            print("  the winner does NOT beat the baseline once judged on unseen rows —")
+        # Selection bias must be measured as an ADVANTAGE that fails to survive,
+        # not as the raw gap between the two splits: the splits have different
+        # intrinsic difficulty, and subtracting one score from the other would
+        # report that difficulty instead of the bias.
+        adv_select = winner["select_f1"] - baseline["select_f1"]
+        adv_report = winner["report_f1"] - baseline["report_f1"]
+        print(f"\n  advantage over baseline, on select : {adv_select:+.4f}")
+        print(f"  advantage over baseline, on report : {adv_report:+.4f}")
+        print(f"  SELECTION BIAS                     : {adv_select - adv_report:+.4f}"
+              "   (the lead that did not survive)")
+        if adv_report <= 0:
+            print("\n  the winner does NOT beat the baseline once judged on unseen rows —")
             print("  its select-split lead was selection noise. Keep the baseline.")
+
+    if baseline:
+        split_gap = baseline["report_f1"] - baseline["select_f1"]
+        spread = max(r["report_f1"] for r in ok) - min(r["report_f1"] for r in ok)
+        print(f"\n  for scale: the same config scores {split_gap:+.4f} differently on the two")
+        print(f"  splits, while the whole hyper-parameter sweep spans only {spread:.4f}.")
+        if abs(split_gap) > spread:
+            print("  Which random split you evaluate on moves the score MORE than any")
+            print("  hyper-parameter here. Treat sub-0.005 differences as unmeasurable.")
     print(f"\nresults -> {out_path}")
 
 

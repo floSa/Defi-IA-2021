@@ -84,6 +84,44 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## Negative result: no classical hyper-parameter beats the default (2026-07-18)
+
+11 configs, one change at a time from the current default, full 217k data,
+fit 152k / select 32.6k / report 32.6k. **All 11 converged** (`n_iter_` below
+`max_iter`), so every comparison is between finished fits — the check that was
+missing when the 2020 project published a retracted comparison.
+
+| config | select | report |
+|---|---:|---:|
+| baseline (C=1, min_df=5, char 2–5, sublinear) | 0.7526 | 0.7608 |
+| C=0.5 | **0.7554** | 0.7603 |
+| C=2 | 0.7492 | 0.7583 |
+| C=4 | 0.7469 | 0.7550 |
+| min_df=2 | 0.7530 | 0.7609 |
+| min_df=10 | 0.7498 | 0.7588 |
+| char 3–5 | 0.7523 | 0.7607 |
+| char 2–6 | 0.7529 | **0.7619** |
+| word 1–3 | 0.7525 | 0.7601 |
+| no sublinear_tf | 0.7468 | 0.7555 |
+| char hash 2²¹ | 0.7534 | 0.7607 |
+
+`C=0.5` wins the selection split by **+0.0028** over the baseline and then loses
+to it by **−0.0005** on the report split: a **selection bias of +0.0034**, on a
+single free parameter. The honest verdict is that **the default configuration is
+already at a local optimum** — nothing here is worth changing.
+
+`char 2–6` is the best on the report split (+0.0011), but it ranked 4th on the
+selection split. Picking it *because* it tops the report column is precisely the
+error this three-way split exists to prevent, so it stays unshipped.
+
+**The most useful number in this table is not in it.** The same baseline config
+scores **0.7526 on one split and 0.7608 on another — a gap of +0.0083**, while
+the entire 11-config sweep spans only **0.0069**. Which random split you evaluate
+on moves the score more than any hyper-parameter tested. Consequence for the rest
+of the project: **treat any classical difference below ~0.005 as unmeasurable
+without multiple seeds**, and be suspicious of any single-split result that
+claims less.
+
 ## ⚠️ The disparate-impact metric is gameable — read before optimising it
 
 Found while designing the λ-sweep threshold tuner (ROADMAP §3 item 16), and

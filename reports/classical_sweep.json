@@ -22,6 +22,96 @@
       "n_iter": 141,
       "max_iter": 1000,
       "converged": true
+    },
+    {
+      "name": "C=2",
+      "select_f1": 0.7491983114456355,
+      "report_f1": 0.7582791374118834,
+      "report_di": 3.8506705786876165,
+      "fit_seconds": 185.5,
+      "n_iter": 460,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "C=4",
+      "select_f1": 0.7468820413708862,
+      "report_f1": 0.7549965020006918,
+      "report_di": 3.921800092907927,
+      "fit_seconds": 259.6,
+      "n_iter": 872,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "min_df=2",
+      "select_f1": 0.7530026437184543,
+      "report_f1": 0.7608743638189897,
+      "report_di": 3.786654032973917,
+      "fit_seconds": 156.6,
+      "n_iter": 268,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "min_df=10",
+      "select_f1": 0.7497789146967554,
+      "report_f1": 0.7587852892762209,
+      "report_di": 3.773381641390421,
+      "fit_seconds": 151.2,
+      "n_iter": 269,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "char 3-5",
+      "select_f1": 0.7523008451324172,
+      "report_f1": 0.7606813010841426,
+      "report_di": 3.788340257994313,
+      "fit_seconds": 129.3,
+      "n_iter": 268,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "char 2-6",
+      "select_f1": 0.7529407864577647,
+      "report_f1": 0.7619263685268861,
+      "report_di": 3.7860550615776556,
+      "fit_seconds": 170.8,
+      "n_iter": 261,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "word 1-3",
+      "select_f1": 0.752472274363062,
+      "report_f1": 0.7601453576309393,
+      "report_di": 3.746140477989211,
+      "fit_seconds": 184.7,
+      "n_iter": 267,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "no sublinear_tf",
+      "select_f1": 0.74684004234032,
+      "report_f1": 0.7554595734228743,
+      "report_di": 3.7583000593862903,
+      "fit_seconds": 170.1,
+      "n_iter": 272,
+      "max_iter": 1000,
+      "converged": true
+    },
+    {
+      "name": "char hash 2**21",
+      "select_f1": 0.753350954122058,
+      "report_f1": 0.760659342466447,
+      "report_di": 3.7978610101257635,
+      "fit_seconds": 170.9,
+      "n_iter": 264,
+      "max_iter": 1000,
+      "converged": true
     }
   ]
 }
