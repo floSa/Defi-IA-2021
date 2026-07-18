@@ -35,6 +35,55 @@ construction spikes >7.4 GB). Confirmed repeatedly on 2026-07-13. Consequences:
 - Reference: 2021 public leaderboard top ≈ 0.81–0.82 Macro-F1. The gap to close
   is the transformer (Step C) + tuning + ensemble.
 
+## ⚠️ Finding: the Macro-F1 bottleneck is NOT the rare classes (2026-07-18)
+
+The whole augmentation strategy rests on a premise stated in
+`preprocessing/augment.py` and ROADMAP §3 — *"rare classes are the ones dragging
+macro-F1 down"*. On the classical model, measured on the 32.6k holdout
+(`reports/error_analysis.md`), that premise is **false**.
+
+| | mean F1 | median support |
+|---|---:|---:|
+| the 7 **rarest** classes | **0.738** | ~130 |
+| the 7 **weakest** classes | **0.659** | 225 |
+
+Spearman correlation between class support and class F1 is only **+0.37**.
+Rarity explains little of the spread — `class_weight="balanced"` is already doing
+its job. `rapper` (117 examples) scores 0.802, better than `teacher` (1372
+examples) at 0.587 and `architect` (876) at 0.673.
+
+What actually costs Macro-F1 is **semantic confusion between neighbouring
+professions**, dominated by the `professor` mega-class (32 % of the data)
+bleeding into every academically-adjacent job and back:
+
+| true → predicted | count |
+|---|---:|
+| professor → teacher | 194 |
+| professor → psychologist | 180 |
+| professor → physician | 165 |
+| psychologist → professor | 150 |
+| physician → professor | 136 |
+| architect ↔ software_engineer | 95 / 80 |
+| nurse → physician | 92 |
+| physician → surgeon | 78 |
+
+**Consequences:**
+
+1. This is the likely explanation for the augmentation result (−0.0028):
+   `augment_rare_classes` synthesises examples for classes *below a count
+   threshold*, i.e. precisely the classes that already score best. It adds
+   paraphrase noise where there was no deficit, and touches none of the
+   confusions above.
+2. Augmentation should be **retargeted at confusable pairs**, not at rare
+   classes — or dropped in favour of work that separates `professor` from
+   `teacher`/`psychologist`/`physician`.
+3. It also predicts **where the transformer's +4 pts come from**: telling
+   "professor" from "teacher" needs context, which is exactly what a contextual
+   encoder does and bag-of-words cannot. Expect the transformer's gain to be
+   concentrated in these confusable mid-frequency classes — worth verifying
+   per-class once a GPU run lands, because if it is *not* concentrated there,
+   the ensemble has more to gain than a single blend weight suggests.
+
 ## Fairness track (Pareto so far)
 
 | variant | Macro-F1 | DI |

@@ -1,0 +1,7 @@
+[21:07:08] === CPU queue start ===
+[21:07:08] START error-analysis
+Macro-F1 0.7643 | DI 3.891
+weakest classes: pastor, teacher, interior_designer, architect, paralegal
+wrote reports/error_analysis.md
+[21:07:23] DONE  error-analysis ((15s))
+[21:07:23] START fairness-pareto
