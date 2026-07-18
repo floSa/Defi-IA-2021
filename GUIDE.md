@@ -100,23 +100,46 @@ Note `transformers` installs as **5.x**, not the 4.x this code was written for.
 The smoke test confirms training, per-epoch eval, checkpointing and early
 stopping all still work on 5.x.
 
-**The GPU is shared until ~09:30.** `scripts/gpu_queue.sh` waits for utilisation
-to drop below 20 %, then runs the whole sequence unattended:
+**The GPU queue is already armed and waiting.** `scripts/gpu_queue.sh` was
+launched on the evening of 2026-07-18; it polls the card every 2 minutes and
+starts on its own after four consecutive readings below 20 % utilisation (one
+reading is not enough — the neighbouring job dips to zero between epochs). It
+then runs, unattended and in order:
 
-```bash
-bash scripts/gpu_queue.sh          # waits, then: roberta-base repro ->
-                                   # roberta-large -> deberta-v3 bf16 ->
-                                   # threshold tuning on the winner
-```
+1. `roberta_base_repro` — **must land near 0.8035.** If it does not, something in
+   the stack changed and every later comparison is void. Do not skip this.
+2. `roberta_large` — batch 16 + grad-accum 2, the biggest expected jump.
+3. `deberta_v3_bf16` — the open question: bf16 (which the T4 lacked) is the
+   leading suspect for stabilising the divergence that killed it on Kaggle.
+4. Threshold tuning + ensemble on whichever backbone won.
 
 Every stage is skipped if its `metrics.json` exists and resumes from its newest
-checkpoint, so re-running the script after any interruption is safe.
+checkpoint, so re-running the script after any interruption is safe. Progress:
+`reports/gpu_queue.log`.
 
-Stage 1 reproduces roberta-base and must land near **0.8035**. If it does not,
-something in the stack changed and every later comparison is void — do not skip
-this check.
+De-risked in advance, so none of these can waste GPU hours:
+- checkpoint-resume **verified by SIGKILLing a real run** and restarting it;
+- the post-GPU chain (`tune_thresholds`, `build_ensemble`) dry-run end to end on
+  correctly-shaped artifacts (`scripts/dryrun_postprocessing.py`);
+- `protobuf` installed — without it DeBERTa-v3's tokenizer dies before touching
+  the GPU;
+- weights for all three backbones pre-downloaded (3.1 GB cached).
 
-Accuracy safety net already shipped: submissions/classical_wordchar_svm.csv
-(~0.764 Macro-F1). Note `submissions/classical_tuned.csv` should be expected
-around **0.767**, not the 0.7714 originally logged — see the audit in
-`reports/experiments.md`.
+### Expectations to hold the results against
+
+| claim in the older docs | what the measurements say |
+|---|---|
+| threshold tuning = +0.8 pt, free | between −0.003 and +0.003, i.e. **≈ 0**, and it costs +0.26 DI |
+| rare classes drag Macro-F1 down | **false** — the 7 rarest average 0.738 F1, the 7 weakest 0.659 |
+| name masking helps fairness | **no measurable effect** (−0.015 DI, inside the noise) |
+| `classical_tuned.csv` ≈ 0.7714 | expect ≈ **0.764** — that figure was in-sample |
+
+Accuracy safety net already shipped: `submissions/classical_wordchar_svm.csv`
+(~0.764 Macro-F1). For the fairness track, **counterfactual training** is the
+lever to ship: DI 3.345 for −0.005 Macro-F1, ~2.6× more efficient than
+threshold-based fairness.
+
+⚠️ Before optimising disparate impact by any means, read the gaming vector in
+`reports/experiments.md` — a job predicted for a single gender scores as perfect
+parity, so a DI-directed optimiser can "win" by emptying a class of one gender.
+Report `count_single_gender_jobs` alongside every DI figure.
