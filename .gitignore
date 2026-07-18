@@ -28,3 +28,7 @@ logs/
 
 # Run logs
 logs_*.txt
+
+# Run queue logs (live, churn constantly; results live in the .json files)
+reports/*_queue.log
+reports/*.smoke.json
