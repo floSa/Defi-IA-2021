@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 
 import numpy as np
@@ -45,6 +44,7 @@ from defi_ia.data.load import load_categories, load_test, load_train
 from defi_ia.data.split import stratified_holdout
 from defi_ia.evaluation.metrics import macro_disparate_impact, macro_f1
 from defi_ia.evaluation.submission import make_submission
+from defi_ia.io_utils import atomic_save
 from defi_ia.models.transformer import TransformerConfig, fine_tune, predict_logits
 from defi_ia.preprocessing.text import basic_clean, scrub_gender
 
@@ -55,12 +55,7 @@ def _prepare(series, scrub: bool):
     return out.map(scrub_gender) if scrub else out
 
 
-def _atomic_save(path: Path, save_fn) -> None:
-    """Write through a temp file + rename: a kill mid-write leaves the old file intact."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    save_fn(tmp)
-    os.replace(tmp, path)
+_atomic_save = atomic_save
 
 
 def main() -> None:
@@ -98,11 +93,12 @@ def main() -> None:
         run_name = f"smoke_{run_name}"
     out_dir = Path("models") / run_name
 
-    epochs, max_length, batch_size, use_cpu = args.epochs, args.max_length, args.batch_size, args.cpu
+    epochs, max_length = args.epochs, args.max_length
+    batch_size, use_cpu = args.batch_size, args.cpu
     if args.smoke:
-        # Small enough to finish on CPU in a couple of minutes; 2 epochs so the
+        # Small enough to finish on CPU in a few minutes; 2 epochs so the
         # per-epoch eval/checkpoint/early-stop path is genuinely exercised.
-        epochs, max_length, batch_size, use_cpu = 2, 64, 16, True
+        epochs, max_length, batch_size, use_cpu = 2, 48, 32, True
         print("[smoke] tiny CPU run — verifies the pipeline, not the science\n")
 
     cfg = TransformerConfig(
