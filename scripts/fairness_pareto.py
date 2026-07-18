@@ -108,6 +108,10 @@ def main() -> None:
     variants, subsample = list(VARIANTS), args.subsample
     if args.smoke:
         variants, subsample = ["none", "scrub", "counterfactual"], 8_000
+        # Never write smoke output to the real results path: cpu_queue.sh reads
+        # that file's existence as "stage already done".
+        if args.out == str(RESULTS):
+            args.out = str(RESULTS.with_suffix(".smoke.json"))
         print("[smoke] 3 variants on 8k rows\n")
 
     if "mask-names" in variants and not _spacy_available():

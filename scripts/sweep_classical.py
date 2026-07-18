@@ -117,6 +117,11 @@ def main() -> None:
     candidates, subsample = CANDIDATES, args.subsample
     if args.smoke:
         candidates, subsample = CANDIDATES[:3], 8_000
+        # Smoke results must never land on the real results path: the queue in
+        # scripts/cpu_queue.sh treats that file's existence as "stage done" and
+        # would skip the real sweep entirely.
+        if args.out == str(RESULTS):
+            args.out = str(RESULTS.with_suffix(".smoke.json"))
         print("[smoke] 3 configs on 8k rows — checks the path, not the science\n")
 
     train = load_train(with_labels=True)
