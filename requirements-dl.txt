@@ -7,4 +7,10 @@ torch>=2.2
 transformers>=4.40
 datasets>=2.19
 accelerate>=0.30
+
+# DeBERTa-v3's tokenizer is a SentencePiece model. Without BOTH of these,
+# `AutoTokenizer.from_pretrained("microsoft/deberta-v3-base")` falls back to a
+# tiktoken reader and dies with "`tiktoken` is required" — i.e. the run fails at
+# the very first step, before touching the GPU. Verified 2026-07-18.
 sentencepiece>=0.2
+protobuf>=4.0
