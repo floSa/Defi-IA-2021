@@ -86,46 +86,51 @@ make eda           # dataset summary
   which would have crashed the GPU run *after* training, at the moment it saved
   its logits. Pinned by `tests/test_atomic_save.py`.
 
-## STATE (2026-07-19 morning) — read this first
+## STATE (2026-07-19 afternoon) — read this first
 
-**Best model: roberta-large, Macro-F1 0.8061** (holdout), against roberta-base
-0.8027 and classical 0.7643. Both transformer runs are **lower bounds** — see
-`reports/experiments.md`.
+**Best model: roberta-large, Macro-F1 0.8241, converged** (its best epoch is not
+its last, so the score is a ceiling and not a floor). The only converged run on
+the project; every roberta-base run was still improving when it stopped.
 
 ### Submissions, all validated against the template (54,300 rows, 28 classes)
 
-| file | expected Macro-F1 | DI | track |
+| file | Macro-F1 | DI | track |
 |---|---:|---:|---|
-| **`final_accuracy_track.csv`** | **≈0.826** | 4.96 | **accuracy — ship this** |
-| `roberta_large_6ep_tuned.csv` | ≈0.826 | 4.96 | identical pipeline, kept for provenance |
-| `roberta_large_6ep_ensemble.csv` | ≈0.821 | 4.58 | if the DI tie-break matters more |
-| **`classical_counterfactual_fairness.csv`** | ≈0.752 | **3.28** | **fairness — ship this** |
-| `classical_wordchar_svm.csv` | ≈0.764 | 3.89 | classical safety net |
+| **`final_accuracy_track.csv`** | **0.8329** | 5.14 | **accuracy — ship this** |
+| `roberta_large_6ep_ensemble.csv` | 0.8288 | 4.43 | better DI, −0.4 pt |
+| **`roberta_counterfactual_fairness.csv`** | **0.8018** | **3.41** | **fairness — ship this** |
+| `classical_counterfactual_fairness.csv` | 0.7522 | 3.28 | lowest DI, but −5 pt |
+| `classical_wordchar_svm.csv` | 0.7643 | 3.89 | classical safety net |
 
-### The three things to do next, in order
+Reference points: 2021 public leaderboard top ≈0.81–0.82; this project started
+the session at 0.8035 (Kaggle roberta-base) and 0.7643 (classical).
 
-1. **Finish roberta-large.** It stopped at epoch 3 of 6 and was still gaining
-   +0.0037 per epoch. Resume from `models/roberta_large_6ep/checkpoint-17310`.
-   Everything needed is on disk. **Open problem:** it sustains 1.30 s/step after
-   a resume against 0.54 s/step on a from-scratch first epoch. Two memory fixes
-   did not help and the cause is unknown — diagnose this before booking a long
-   window, or the run will not fit.
-2. **Re-measure the levers on the shipped model, not on a proxy.** Threshold
-   tuning is worth ≈0 on the classical model and **+0.019** on roberta-large.
-   The classical testbed actively misled here.
-3. **Retarget augmentation at confusable pairs**, not rare classes — the rare
-   classes are not the bottleneck (`reports/error_analysis.md`).
+### What is still open
+
+1. **Nothing has been submitted to Kaggle.** Every figure above is offline
+   holdout. Drop a token in `~/.kaggle/kaggle.json` and the submissions are
+   ready to go.
+2. **Single seed for every transformer number.** The classical work is 3–5
+   seeds; the GPU work is not. The 0.8329 also won a 4-way pipeline choice on
+   its judging half, so it carries a little selection optimism.
+3. **DeBERTa-v3 in bf16 never ran** — the ROADMAP's open question about whether
+   bf16 stabilises it is still open.
+4. **Counterfactual training on roberta-large** was never tried; on roberta-base
+   it cost 0.0009 Macro-F1 for 0.70 DI, so on large it could plausibly give a
+   fairness submission above 0.82.
 
 ### Traps already found and closed — do not re-learn these
 
 - **The DI metric is gameable**: a job predicted for one gender only scores as
-  *perfect parity*. Any DI-directed optimiser will find this. Always report
-  `count_single_gender_jobs` next to a DI figure.
+  *perfect parity*. Always report `count_single_gender_jobs` beside a DI figure.
 - Anything tuned must be scored on rows that did not tune it. Three published
   numbers on this project were in-sample.
-- Never compare runs at a fixed epoch budget without checking convergence
-  (`scripts/check_convergence.py`), nor epoch-by-epoch across different budgets
-  (the LR schedule is stretched).
+- **Never read a single epoch without the LR schedule.** A flat spot mid-schedule
+  is not convergence — roberta-large looked plateaued at epoch 4 and then gained
+  1.8 points at epoch 5. Use `scripts/check_convergence.py`.
+- **After `kill -9` on a GPU job, confirm VRAM actually dropped before
+  relaunching.** A stale 7 GB allocation cost a 2.9× slowdown and looked exactly
+  like a model problem.
 - `--smoke` before any long run; it caught a bug that would have crashed the GPU
   job *after* training.
 

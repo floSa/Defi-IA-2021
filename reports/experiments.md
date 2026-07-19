@@ -84,6 +84,56 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## FINAL: roberta-large converged at 0.8241, submission at 0.8329 (2026-07-19)
+
+Given its full 6 epochs, roberta-large is the **only run on this project that
+actually converged** — its best epoch is epoch 5, not its last, so early stopping
+restored it and `check_convergence.py` does not flag it.
+
+| epoch | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---:|---:|---:|---:|---:|---:|
+| Macro-F1 | 0.7710 | 0.8023 | 0.8060 | 0.8059 | **0.8241** | 0.8225 |
+
+The flat spot at epochs 3–4 was **not** a plateau — it was mid-schedule, with the
+learning rate still high. Its decay at epoch 5 unlocked another 1.8 points. This
+is the third time on this project that reading a single epoch without accounting
+for the LR schedule produced a wrong call, and it was called wrong here too
+before epoch 5 landed.
+
+### Final ranking (⚠ = still improving when it stopped)
+
+| model | Macro-F1 | DI | |
+|---|---:|---:|---|
+| **roberta-large, 6 epochs** | **0.8241** | 4.150 | converged |
+| roberta-base, 6 epochs | 0.8027 | 4.108 | ⚠ |
+| roberta-base counterfactual | 0.8018 | **3.407** | ⚠ |
+| roberta-base, 3 epochs | 0.7978 | 4.134 | ⚠ |
+| classical word+char SVM | 0.7643 | 3.891 | — |
+
+roberta-large beats roberta-base by **+0.021** — and the comparison now favours
+roberta-base if anything, since base was still climbing while large had stopped.
+
+### Accuracy-track submission
+
+| pipeline | Macro-F1 | DI |
+|---|---:|---:|
+| roberta-large argmax | 0.8236 | 4.439 |
+| **+ per-class thresholds** | **0.8329** | 5.142 |
+| + classical ensemble | 0.8288 | 4.434 |
+| + ensemble + thresholds | 0.8295 | 4.771 |
+
+Composing both levers again lost to thresholds alone — same as on the
+epoch-3 model, and for the same reason (α plus 28 biases on one 16k split).
+`submissions/final_accuracy_track.csv` ships the thresholds pipeline.
+
+Against the 2021 public leaderboard top of ≈0.81–0.82, and the project's own
+starting points of 0.8035 (Kaggle reference) and 0.7643 (classical).
+
+**Caveats that remain:** single seed for every transformer number; the 0.8329
+won a 4-way choice on the judging half, so it carries a little selection
+optimism; and DI 5.14 is the worst of any submission here — the accuracy track
+buys its Macro-F1 squarely at the expense of the fairness tie-break.
+
 ## Counterfactual training is ~free on the transformer (2026-07-19)
 
 The fairness track was capped at classical accuracy because counterfactual
