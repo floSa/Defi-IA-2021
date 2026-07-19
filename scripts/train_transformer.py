@@ -46,6 +46,7 @@ from defi_ia.evaluation.metrics import macro_disparate_impact, macro_f1
 from defi_ia.evaluation.submission import make_submission
 from defi_ia.io_utils import atomic_save
 from defi_ia.models.transformer import TransformerConfig, fine_tune, predict_logits
+from defi_ia.preprocessing.augment import gender_counterfactual
 from defi_ia.preprocessing.text import basic_clean, scrub_gender
 
 
@@ -75,6 +76,10 @@ def main() -> None:
     p.add_argument("--bf16", action="store_true",
                    help="bf16 instead of fp16 (Ada supports it; try this if a model diverges)")
     p.add_argument("--scrub-gender", action="store_true")
+    p.add_argument("--counterfactual", action="store_true",
+                   help="train on each bio AND its gender-swapped twin (fairness track). "
+                        "Best DI lever measured on the classical model (3.28 vs 3.83); "
+                        "untested on a transformer, which is the point of running it.")
     p.add_argument("--valid-size", type=float, default=0.15)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--full", action="store_true", help="train on all data (minus a small holdout)")
@@ -121,6 +126,16 @@ def main() -> None:
         tr, va = stratified_holdout(train, 0.03, args.seed)
     else:
         tr, va = stratified_holdout(train, args.valid_size, args.seed)
+
+    if args.counterfactual:
+        # Append the gender-swapped twin of every TRAINING row, label unchanged,
+        # so the job becomes gender-invariant by construction. The validation
+        # side is deliberately left alone: it must stay the distribution the
+        # competition actually scores, or the DI would be flattering and false.
+        swapped = tr.copy()
+        swapped["text"] = swapped["text"].map(gender_counterfactual)
+        tr = pd.concat([tr, swapped])
+        print(f"  counterfactual: training set doubled to {len(tr):,}")
 
     print(f"run '{run_name}': train {len(tr):,} / valid {len(va):,} -> {out_dir}")
     trainer, tokenizer = fine_tune(cfg, tr, va, resume=args.resume)
