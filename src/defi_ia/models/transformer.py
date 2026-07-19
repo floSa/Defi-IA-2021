@@ -116,7 +116,14 @@ def _build_trainer(cfg, train_df, valid_df):
     args = TrainingArguments(
         output_dir=cfg.output_dir,
         per_device_train_batch_size=cfg.batch_size,
-        per_device_eval_batch_size=cfg.batch_size * 2,
+        # Same batch as training, NOT double. Doubling is the usual trick (no
+        # gradients to store), but with roberta-large at max_length 192 the eval
+        # pass spiked VRAM to 14.9/16 GB; past that point the WSL driver spills
+        # to system RAM and the whole run collapsed from 0.54 s/step to 1.53 —
+        # a 2.8x slowdown that turned a 5 h job into a 12 h one. Measured
+        # 2026-07-19. The eval pass costs a few extra seconds this way; the
+        # alternative cost hours.
+        per_device_eval_batch_size=cfg.batch_size,
         gradient_accumulation_steps=cfg.grad_accum,
         learning_rate=cfg.learning_rate,
         num_train_epochs=cfg.epochs,

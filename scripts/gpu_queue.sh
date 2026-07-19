@@ -20,6 +20,12 @@ PY=.venv/bin/python
 LOG=reports/gpu_queue.log
 mkdir -p reports models
 
+# Expandable segments keep the caching allocator from fragmenting across the
+# train/eval alternation. Fragmentation is what pushed roberta-large over the
+# VRAM edge mid-run on 2026-07-19, after which the driver spilled to system RAM
+# and throughput fell by 2.8x.
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 
 # --- wait for the other job to release the GPU -------------------------------
