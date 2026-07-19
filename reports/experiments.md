@@ -84,6 +84,67 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## Post-processing on roberta-large — and a reversal (2026-07-19)
+
+All measured on rows the tuner/sweeper never saw (validation split in half:
+16,290 calibrate, 16,290 judge).
+
+| step | Macro-F1 | Δ | DI | ΔDI |
+|---|---:|---:|---:|---:|
+| roberta-large, argmax | 0.8071 | — | 4.460 | — |
+| **+ per-class thresholds** | **0.8262** | **+0.0191** | 4.964 | +0.504 |
+| + classical ensemble | 0.8209 | +0.0139 | 4.581 | +0.122 |
+
+### ⚠️ Threshold tuning works on the transformer — the classical verdict does not transfer
+
+On the classical model the honest threshold gain was **≈ 0** (between −0.003 and
++0.003, see the audit above). On roberta-large it is **+0.0191** — a real, large
+lever, six times bigger than anything the classical testbed suggested.
+
+This retracts the generalisation, not the audit. Both numbers stand; what was
+wrong was assuming the classical testbed's verdict would carry over. It did not,
+and the ablation-on-a-cheap-proxy methodology recorded in ROADMAP §2 is exactly
+what produced that mistaken expectation. **Techniques must be re-measured on the
+model that ships.**
+
+The in-sample figure would have been +0.0307 — still inflated by 1.6×, so the
+nested protocol remains necessary; it just is not the difference between a real
+lever and a fake one here.
+
+The DI cost is severe: **4.460 → 4.964**. Same mechanism as before (thresholds
+push predictions into rare, gender-skewed classes), and larger because the lever
+itself is larger.
+
+### The ensemble is real, and the per-class analysis predicted it
+
+α = 0.100 on the transformer, +0.0139 over the transformer alone. Note α is
+**not** interpretable as a mixing weight here: softmaxed transformer logits are
+near one-hot while softmaxed SVM margins are diffuse, so a small α still lets the
+transformer dominate. The sweep found the operating point empirically; the number
+should not be read as "10 % transformer".
+
+The gain was predicted before it was measured. `error_analysis.md` argued the
+classical model loses Macro-F1 to confusion between neighbouring professions, so
+a contextual encoder should gain most exactly there —
+`reports/per_class_comparison.md` confirms it:
+
+- mean gain on the 7 flagged bottleneck classes: **+0.0530**
+- mean gain on the other 21: **+0.0380** (ratio 1.4×)
+- `pastor`, the classical model's worst class, gains **+0.133**
+
+And the complementarity is genuine in both directions — the classical model
+still *beats* roberta-large on `surgeon` (−0.019), `professor` (−0.015),
+`dentist` and `physician` (−0.004). Different failure modes are what an ensemble
+monetises, and this one does.
+
+### Which submission to ship
+
+`submissions/roberta_large_6ep_tuned.csv` is the best on Macro-F1 (≈0.826
+expected) but carries DI 4.96. `..._ensemble.csv` gives ≈0.821 at DI 4.58. The
+accuracy track should ship the tuned one; the fairness track keeps
+`classical_counterfactual_fairness.csv` (DI 3.281). Not yet tried: thresholds on
+top of the ensemble, which composes the two levers.
+
 ## roberta-large is the best model, and the comparison is safe (2026-07-19)
 
 | model | epochs run | trajectory | Macro-F1 | DI |
