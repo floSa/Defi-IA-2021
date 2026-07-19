@@ -13,7 +13,8 @@ The written `metrics.json` carries `from_checkpoint` and the checkpoint's epoch,
 so nothing downstream can mistake a partially-trained model for a finished one.
 
     python scripts/artifacts_from_checkpoint.py --run-dir models/roberta_large_6ep
-    python scripts/artifacts_from_checkpoint.py --run-dir models/x --checkpoint models/x/checkpoint-11540
+    python scripts/artifacts_from_checkpoint.py --run-dir models/x \
+        --checkpoint models/x/checkpoint-11540
 """
 
 from __future__ import annotations
