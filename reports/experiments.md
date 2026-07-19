@@ -84,6 +84,50 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## roberta-large is the best model, and the comparison is safe (2026-07-19)
+
+| model | epochs run | trajectory | Macro-F1 | DI |
+|---|---:|---|---:|---:|
+| classical word+char SVM | — | — | 0.7643 | 3.891 |
+| roberta-base (Kaggle reference, 2026-07-13) | 2 | — | 0.8035 | 4.15 |
+| roberta-base | 6 | 0.7350 → … → 0.8003 → 0.8027 | 0.8027 ⚠ | 4.108 |
+| **roberta-large** | **3 of 6** | 0.7710 → 0.8023 → **0.8060** | **0.8061** ⚠ | 4.126 |
+
+**roberta-large wins with half the epochs.** The comparison is unequal — and
+unequal in the direction that *penalises the winner*, which is what makes the
+conclusion safe. This was stated before the numbers were known: a larger model
+converges more slowly, so a shared epoch budget handicaps it; if it wins anyway,
+the result holds.
+
+Both runs are flagged by `check_convergence.py` as still improving, so both are
+lower bounds. roberta-large is by far the more truncated of the two (stopped at
+epoch 3 of a 6-epoch schedule, still gaining +0.0037 on its last epoch).
+
+**What can be claimed:** roberta-large is at least as good as roberta-base, on
+half the epochs, and is the best model measured on this project.
+**What cannot:** by how much. 0.8061 is a floor, not a ceiling.
+
+### Why it stopped at epoch 3
+
+roberta-large sustained **1.30 s/step after a resume** against 0.54 s/step on its
+first, from-scratch epoch — so the remaining epochs needed 8.3 h against a 3.75 h
+window before the GPU had to be handed back. Two memory fixes were applied (eval
+batch reduced from 2× to 1× the train batch after VRAM hit 14.9/16 GB;
+`expandable_segments` against allocator fragmentation) and **neither restored the
+original speed**. The root cause was not identified; the correlation is with
+*resuming*, not with elapsed time. Recorded as an open question rather than
+explained away.
+
+Rather than let the run hit a wall and produce nothing,
+`scripts/finish_by_deadline.sh` stopped it at the epoch-3 checkpoint and
+`scripts/artifacts_from_checkpoint.py` rebuilt the logits and metrics without
+retraining. `metrics.json` carries `from_checkpoint` and `checkpoint_epoch` so
+nothing downstream can mistake this for a completed run.
+
+**First thing to redo with a dedicated GPU window:** roberta-large for its full
+6 epochs. Everything needed is on disk — resume from
+`models/roberta_large_6ep/checkpoint-17310`.
+
 ## The stack still reproduces the reference (2026-07-19)
 
 | run | epochs | trajectory (Macro-F1 per epoch) | final | DI |
