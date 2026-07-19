@@ -84,6 +84,44 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## Counterfactual training is ~free on the transformer (2026-07-19)
+
+The fairness track was capped at classical accuracy because counterfactual
+training had only ever been tried on the linear model. Run on roberta-base
+(3 epochs over the doubled set = the same gradient budget as the 6-epoch
+non-counterfactual run, so the two are comparable):
+
+| model | Macro-F1 | DI |
+|---|---:|---:|
+| roberta-base, no mitigation | 0.8027 | 4.108 |
+| **roberta-base, counterfactual** | **0.8018** | **3.407** |
+| | **−0.0009** | **−0.701** |
+
+**It costs essentially nothing.** −0.0009 Macro-F1 — inside the noise — for
+−0.701 DI. On the classical model the same lever cost −0.0069 for −0.547, so on
+the transformer it is both **7× cheaper and 28 % more effective**.
+
+The likely reason: a linear model over TF-IDF has to spend capacity memorising
+that "she"-features and "he"-features both map to the same job, which competes
+directly with its predictive features. A contextual encoder already represents
+the job independently of the pronoun, so being shown both genders mostly removes
+a spurious shortcut rather than costing it anything.
+
+### This changes the fairness-track recommendation
+
+| candidate | Macro-F1 | DI |
+|---|---:|---:|
+| classical counterfactual | 0.7522 | **3.281** |
+| **roberta counterfactual** | **0.8018** | 3.407 |
+
+The classical model still has the lower DI, by 0.126. But **DI is only the
+tie-break among the top 10 on Macro-F1** — a 0.752 submission may never reach
+the round where fairness is scored at all. Ship
+`roberta_counterfactual_fairness.csv`: +0.050 Macro-F1 buys a place at the table
+for +0.126 DI.
+
+⚠️ Single seed on the transformer side. The classical figure is a 3-seed mean.
+
 ## Post-processing on roberta-large — and a reversal (2026-07-19)
 
 All measured on rows the tuner/sweeper never saw (validation split in half:
