@@ -206,7 +206,30 @@ epoch 3 of a 6-epoch schedule, still gaining +0.0037 on its last epoch).
 half the epochs, and is the best model measured on this project.
 **What cannot:** by how much. 0.8061 is a floor, not a ceiling.
 
-### Why it stopped at epoch 3
+### The slowdown was stale VRAM, not the resume — earlier diagnosis retracted
+
+Same checkpoint, same script, same flags, run again a few hours later:
+
+| | VRAM at start | speed |
+|---|---:|---:|
+| morning restart | 14.7 / 16 GB | 1.30 s/step |
+| afternoon restart | 10.4 / 16 GB | **0.45 s/step** |
+
+**2.9× faster, and faster than the 0.54 s/step of the original from-scratch
+epoch.** The difference: after the morning `kill -9`, `nvidia-smi` still reported
+**7033 MiB held with no process attached**. The restarted run therefore began
+with ~9 GB available instead of 16 and spilled to system RAM.
+
+The morning write-up blamed the *resume*, because the timing correlated. That
+was wrong — resuming is fine; starting on a GPU that has not actually released
+its memory is not. The two memory fixes (eval batch 2×→1×, `expandable_segments`)
+were not useless, but neither could do anything about 7 GB already taken.
+
+**Operational rule: after `kill -9` on a GPU job, confirm VRAM has actually
+dropped before relaunching.** A stale allocation costs a factor of three and
+looks exactly like a model problem.
+
+### Why it stopped at epoch 3 (first attempt)
 
 roberta-large sustained **1.30 s/step after a resume** against 0.54 s/step on its
 first, from-scratch epoch — so the remaining epochs needed 8.3 h against a 3.75 h
