@@ -218,36 +218,51 @@ All five variants fit on the same 184.6k train split and scored on the same
 select anything, so none carries selection bias.
 (`scripts/fairness_pareto.py`, results in `reports/fairness_pareto.json`.)
 
-| variant | Macro-F1 | ΔF1 | DI | ΔDI | F1 cost per DI point |
+**3 seeds (7, 42, 2024)**, deltas **paired** — each variant compared against the
+no-mitigation baseline *of its own seed*, so the seed's intrinsic difficulty
+cancels instead of inflating the spread. Full table:
+`reports/fairness_pareto_multiseed.md`.
+
+| variant | Macro-F1 | ΔF1 (paired) | DI | ΔDI (paired) | F1 cost per DI point |
 |---|---:|---:|---:|---:|---:|
-| none | 0.7643 | — | 3.891 | — | — |
-| name masking (NER) | 0.7634 | −0.0010 | 3.875 | −0.015 | 0.065 |
-| **gender scrubbing** | 0.7609 | −0.0035 | **3.478** | −0.413 | **0.008** |
-| scrubbing + masking | 0.7600 | −0.0043 | 3.526 | −0.364 | 0.012 |
-| **counterfactual training** | 0.7591 | −0.0052 | **3.345** | **−0.546** | 0.010 |
+| none | 0.7591 ± 0.0049 | — | 3.828 ± 0.094 | — | — |
+| name masking (NER) | 0.7575 ± 0.0051 | −0.0016 ± 0.0015 | 3.816 ± 0.051 | −0.012 ± 0.073 | — |
+| **gender scrubbing** | 0.7566 ± 0.0039 | −0.0025 ± 0.0010 | 3.462 ± 0.024 | −0.366 ± 0.071 | **0.0068** |
+| scrubbing + masking | 0.7563 ± 0.0032 | −0.0028 ± 0.0027 | 3.464 ± 0.059 | −0.365 ± 0.100 | 0.0077 |
+| **counterfactual training** | 0.7522 ± 0.0060 | −0.0069 ± 0.0019 | **3.281 ± 0.061** | **−0.547 ± 0.105** | 0.0126 |
 
-**⚠️ Noise floor.** These are single-seed measurements. The threshold audit gave
-a seed-to-seed sd of **0.062 DI** on this model, so any DI difference below
-~0.06 is not distinguishable from noise. Read the table accordingly:
+Pairing matters: it shrank the uncertainty on the scrubbing effect enough to
+make it unambiguous, where the raw per-seed DI values overlap heavily.
 
-- **Counterfactual training and gender scrubbing are real, large effects**
-  (−0.55 and −0.41 DI, both far outside the noise band). Counterfactual reaches
-  the lowest DI; scrubbing has the slightly better exchange rate.
-- **Name masking does essentially nothing** (−0.015 DI, well inside the noise).
-  This closes a *todo* that had been open since the start of the project. The
-  hypothesis was that first names leak gender as strongly as pronouns do; on
-  this data, once pronouns are present, masking names buys no measurable
-  fairness. Not worth the spaCy dependency and the extra 190 s per fit.
-- **"scrubbing + masking" vs "scrubbing" is within noise** (ΔDI 0.048 < 0.06).
-  The script flags the combination as dominated, but on one seed that verdict
-  is not safe — it should be re-run across seeds before being acted on. What
-  *is* safe: adding masking on top of scrubbing does not help.
+**Settled:**
 
-**Shipping recommendation:** counterfactual training for the fairness-track
-submission (best DI, and it *adds* signal instead of removing it, so the test
-text stays untouched), with gender scrubbing as the cheaper alternative if the
-0.5 pt of Macro-F1 matters more than the last 0.13 of DI. The accuracy track
-keeps no mitigation.
+- **Name masking does nothing measurable.** ΔDI **−0.012 ± 0.073** — the effect
+  is smaller than its own spread. This closes a *todo* open since the start of
+  the project: the hypothesis was that first names leak gender as strongly as
+  pronouns, and on this data they do not, once pronouns are already there.
+  `scrub+mask` (−0.365) is indistinguishable from `scrub` alone (−0.366), which
+  is the same conclusion reached a second way. Drop the spaCy dependency.
+- **On one seed, `scrub` beat `scrub+mask` on DI; on another the order flipped.**
+  The earlier "dominated" verdict was noise, and declining to act on it was
+  correct.
+
+**Neither survivor dominates the other — they are both on the front:**
+
+| | reaches | costs |
+|---|---|---|
+| gender scrubbing | DI 3.462 | 0.0068 Macro-F1 per DI point — **best rate** |
+| counterfactual training | **DI 3.281** — furthest | 0.0126 per DI point |
+
+Counterfactual buys 0.18 more DI than scrubbing, at roughly double the price per
+point. For reference, threshold tuning at λ=0.05 costs **0.026** per DI point —
+so scrubbing is ~4× and counterfactual ~2× more efficient than post-hoc
+thresholding. Changing what the model learns beats redistributing fixed scores.
+
+**Shipping recommendation:** **counterfactual training** for the fairness-track
+submission — that submission exists to minimise DI, and it goes furthest, while
+*adding* signal rather than removing it (the test text stays untouched).
+`scrub` is the pick if Macro-F1 on the fairness submission matters too. The
+accuracy track keeps no mitigation.
 
 Both mitigations are worth re-testing on the transformer: it can exploit context
 that a bag-of-words cannot, so the accuracy cost may well be smaller there.

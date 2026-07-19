@@ -16,6 +16,27 @@
       "macro_f1": 0.755767322026821,
       "disparate_impact": 3.4349622069030312,
       "fit_seconds": 188.7
+    },
+    {
+      "variant": "mask-names",
+      "n_train": 184617,
+      "macro_f1": 0.7549772177478337,
+      "disparate_impact": 3.7821099998678585,
+      "fit_seconds": 202.7
+    },
+    {
+      "variant": "scrub+mask",
+      "n_train": 184617,
+      "macro_f1": 0.7540197023835704,
+      "disparate_impact": 3.4552276259290577,
+      "fit_seconds": 189.9
+    },
+    {
+      "variant": "counterfactual",
+      "n_train": 369234,
+      "macro_f1": 0.7493348951381568,
+      "disparate_impact": 3.2769247677677997,
+      "fit_seconds": 405.8
     }
   ]
 }
