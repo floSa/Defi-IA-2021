@@ -84,6 +84,40 @@ bleeding into every academically-adjacent job and back:
    per-class once a GPU run lands, because if it is *not* concentrated there,
    the ensemble has more to gain than a single blend weight suggests.
 
+## ⚠️ REAL KAGGLE SCORE: 0.82166 — the holdout overestimated by 0.011 (2026-07-19)
+
+`final_accuracy_track.csv` submitted. **Public score 0.82166** (second column
+shown: 0.82403), against a holdout estimate of **0.8329**.
+
+| | Macro-F1 | gap to us |
+|---|---:|---:|
+| 1st — France UR2, WeTried | 0.84247 | +0.0208 |
+| 2nd — France UJM, BravoNils | 0.82932 | +0.0077 |
+| 3rd — Cameroun ENSPY, Fred | 0.82733 | +0.0057 |
+| **us** | **0.82166** | — |
+
+**The offline estimate was optimistic by +0.0112 — twice the distance to the
+podium.** This is the single most consequential measurement of the whole
+session: every decision taken on holdout numbers alone is now suspect, including
+the choice to ship the thresholded pipeline over the ensemble.
+
+Three candidate causes, most likely first:
+
+1. **The per-class biases do not fully transfer.** Fitted on 32,580 validation
+   rows, applied to 54,300 test rows from a neighbouring but not identical
+   distribution. The measured +0.019 is probably smaller in reality.
+2. **Selection optimism on the final pipeline choice** — it won a 4-way
+   comparison judged on the same rows. Flagged at the time, never quantified.
+3. **Single split, single seed** behind every transformer figure.
+
+**These are separable, and cheaply.** Submitting `roberta_large_6ep_ensemble.csv`
+(holdout 0.8288) and a plain-argmax version isolates cause 1 from causes 2–3.
+Until that is done, further optimisation is blind. Top teams used 9, 44 and 14
+entries — a submission is a real measurement and is worth more than any offline
+estimate.
+
+Full analysis and the ranked plan: [`PRECONISATIONS.md`](PRECONISATIONS.md).
+
 ## FINAL: roberta-large converged at 0.8241, submission at 0.8329 (2026-07-19)
 
 Given its full 6 epochs, roberta-large is the **only run on this project that

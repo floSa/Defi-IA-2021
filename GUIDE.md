@@ -88,9 +88,19 @@ make eda           # dataset summary
 
 ## STATE (2026-07-19 afternoon) — read this first
 
-**Best model: roberta-large, Macro-F1 0.8241, converged** (its best epoch is not
-its last, so the score is a ceiling and not a floor). The only converged run on
-the project; every roberta-base run was still improving when it stopped.
+**Submitted to Kaggle: public score 0.82166.** 4th against the 2021 leaderboard
+(1st 0.84247, 2nd 0.82932, 3rd 0.82733) — **0.0057 off the podium, 0.0208 off
+first place**.
+
+⚠️ **The holdout estimate was 0.8329 — optimistic by 0.0112**, twice the distance
+to the podium. Do not trust an offline figure from this project without
+discounting it. See [`reports/PRECONISATIONS.md`](reports/PRECONISATIONS.md) for
+the analysis, the ranked list of what to try next, and what is already measured
+as worthless.
+
+Best model: roberta-large, holdout Macro-F1 0.8241, **converged** (its best epoch
+is not its last). The only converged run on the project; every roberta-base run
+was still improving when it stopped.
 
 ### Submissions, all validated against the template (54,300 rows, 28 classes)
 
