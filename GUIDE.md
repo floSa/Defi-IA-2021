@@ -86,6 +86,49 @@ make eda           # dataset summary
   which would have crashed the GPU run *after* training, at the moment it saved
   its logits. Pinned by `tests/test_atomic_save.py`.
 
+## STATE (2026-07-19 morning) — read this first
+
+**Best model: roberta-large, Macro-F1 0.8061** (holdout), against roberta-base
+0.8027 and classical 0.7643. Both transformer runs are **lower bounds** — see
+`reports/experiments.md`.
+
+### Submissions, all validated against the template (54,300 rows, 28 classes)
+
+| file | expected Macro-F1 | DI | track |
+|---|---:|---:|---|
+| **`final_accuracy_track.csv`** | **≈0.826** | 4.96 | **accuracy — ship this** |
+| `roberta_large_6ep_tuned.csv` | ≈0.826 | 4.96 | identical pipeline, kept for provenance |
+| `roberta_large_6ep_ensemble.csv` | ≈0.821 | 4.58 | if the DI tie-break matters more |
+| **`classical_counterfactual_fairness.csv`** | ≈0.752 | **3.28** | **fairness — ship this** |
+| `classical_wordchar_svm.csv` | ≈0.764 | 3.89 | classical safety net |
+
+### The three things to do next, in order
+
+1. **Finish roberta-large.** It stopped at epoch 3 of 6 and was still gaining
+   +0.0037 per epoch. Resume from `models/roberta_large_6ep/checkpoint-17310`.
+   Everything needed is on disk. **Open problem:** it sustains 1.30 s/step after
+   a resume against 0.54 s/step on a from-scratch first epoch. Two memory fixes
+   did not help and the cause is unknown — diagnose this before booking a long
+   window, or the run will not fit.
+2. **Re-measure the levers on the shipped model, not on a proxy.** Threshold
+   tuning is worth ≈0 on the classical model and **+0.019** on roberta-large.
+   The classical testbed actively misled here.
+3. **Retarget augmentation at confusable pairs**, not rare classes — the rare
+   classes are not the bottleneck (`reports/error_analysis.md`).
+
+### Traps already found and closed — do not re-learn these
+
+- **The DI metric is gameable**: a job predicted for one gender only scores as
+  *perfect parity*. Any DI-directed optimiser will find this. Always report
+  `count_single_gender_jobs` next to a DI figure.
+- Anything tuned must be scored on rows that did not tune it. Three published
+  numbers on this project were in-sample.
+- Never compare runs at a fixed epoch budget without checking convergence
+  (`scripts/check_convergence.py`), nor epoch-by-epoch across different budgets
+  (the LR schedule is stretched).
+- `--smoke` before any long run; it caught a bug that would have crashed the GPU
+  job *after* training.
+
 ## RESUME HERE (2026-07-18 evening — desktop, RTX 4060 Ti)
 
 The Kaggle route is retired (GPU quota exhausted). Everything now runs locally.
